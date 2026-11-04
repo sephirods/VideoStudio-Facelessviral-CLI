@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""
+Master Environment Setup & Dependency Installer (Paso 0 CLI)
+Installs dependencies, audits FFmpeg, auto-detects hardware encoding,
+creates required directory structure and verifies subagent definitions.
+Ready for one-click setup after cloning from GitHub.
+"""
+
+import subprocess
+import sys
+import os
+import shutil
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+def print_header(title):
+    print("\n" + "=" * 65)
+    print(f"  {title}")
+    print("=" * 65)
+
+def step_check_python():
+    print_header("1. Verificando Entorno de Python")
+    v = sys.version_info
+    print(f"Python detectado: {v.major}.{v.minor}.{v.micro}")
+    if v.major < 3 or (v.major == 3 and v.minor < 10):
+        print("ERROR: Se requiere Python 3.10 o superior.", file=sys.stderr)
+        sys.exit(1)
+    print("Python OK.")
+
+def step_install_dependencies():
+    print_header("2. Instalando Dependencias de Python (requirements.txt)")
+    req_file = os.path.join(ROOT_DIR, "requirements.txt")
+    if not os.path.exists(req_file):
+        print("Aviso: No se encontro requirements.txt, omitiendo pip install.")
+        return
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file, "--quiet"])
+        print("Dependencias de Python instaladas correctamente.")
+    except subprocess.CalledProcessError as e:
+        print(f"Aviso al instalar dependencias: {e}", file=sys.stderr)
+
+def step_check_ffmpeg():
+    print_header("3. Verificando FFmpeg")
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if ffmpeg_bin:
+        print(f"FFmpeg encontrado en: {ffmpeg_bin}")
+    else:
+        print("ADVERTENCIA: FFmpeg no se encontro en el PATH del sistema.", file=sys.stderr)
+        print("Instalalo antes de renderizar videos (https://ffmpeg.org/download.html)", file=sys.stderr)
+
+def step_detect_hardware():
+    print_header("4. Auditando Aceleracion de Hardware de Video")
+    detect_script = os.path.join(ROOT_DIR, "scripts", "detect_hardware.py")
+    if os.path.exists(detect_script):
+        subprocess.call([sys.executable, detect_script])
+    else:
+        print("Aviso: detect_hardware.py no encontrado.")
+
+def step_ensure_directories():
+    print_header("5. Inicializando Estructura de Carpetas")
+    dirs = [
+        "config",
+        "assets/b-roll",
+        "videos/publicaciones",
+        "pipeline_runs",
+        "storage/local_videos"
+    ]
+    for d in dirs:
+        full_p = os.path.join(ROOT_DIR, d)
+        os.makedirs(full_p, exist_ok=True)
+    print("Estructura de carpetas lista.")
+
+    channels_path = os.path.join(ROOT_DIR, "config", "channels.json")
+    if not os.path.exists(channels_path):
+        with open(channels_path, "w", encoding="utf-8") as f:
+            f.write('{\n  "active_default_channel": null,\n  "channels": {}\n}\n')
+        print("config/channels.json inicializado.")
+
+def step_verify_subagents():
+    print_header("6. Verificando Definicion de Subagentes")
+    agents_dir = os.path.join(ROOT_DIR, ".agents", "agents")
+    expected = [
+        "trend-researcher",
+        "viral-scriptwriter",
+        "viral-copywriter",
+        "visual-asset-reviewer",
+        "video-renderer",
+        "video-qa-validator",
+        "thumbnail-designer",
+        "packaging-archiver",
+        "social-media-publisher"
+    ]
+    found = 0
+    for ag in expected:
+        agent_file = os.path.join(agents_dir, ag, "agent.md")
+        if os.path.exists(agent_file):
+            found += 1
+            print(f"  [OK] {ag}")
+        else:
+            print(f"  [FALTA] {ag} -> {agent_file}")
+    print(f"\nSubagentes operativos: {found}/{len(expected)}")
+
+def main():
+    print_header("FACTORIA DE VIDEO - INSTALADOR Y SETUP MAESTRO")
+    step_check_python()
+    step_install_dependencies()
+    step_check_ffmpeg()
+    step_detect_hardware()
+    step_ensure_directories()
+    step_verify_subagents()
+    print_header("INSTALACION COMPLETADA EXITOSAMENTE")
+    print("Todo listo. El Orquestador puede operar la factoria de video.")
+
+if __name__ == "__main__":
+    main()

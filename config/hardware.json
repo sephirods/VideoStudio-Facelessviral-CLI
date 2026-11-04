@@ -1,0 +1,10 @@
+{
+  "hardware_type": "nvidia",
+  "gpu_name": "NVIDIA GeForce RTX 3070",
+  "gpu_vram_mb": 8192,
+  "cpu_cores": 16,
+  "video_encoder": "h264_nvenc",
+  "max_concurrency": 4,
+  "ffmpeg_preset": "p4",
+  "status": "ready"
+}

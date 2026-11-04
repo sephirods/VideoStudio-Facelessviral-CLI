@@ -1,0 +1,23 @@
+# Almacén de sesiones y cookies privadas (NUNCA SUBIR A GIT)
+config/sessions/
+*.json.bak
+
+# Archivos pesados y temporales
+videos/descargas_stock/
+videos/temp/
+pipeline_runs/
+*.mp4
+*.mp3
+*.wav
+
+# Python y entornos
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Antigravity y cachés locales
+.gemini/
+.system_generated/

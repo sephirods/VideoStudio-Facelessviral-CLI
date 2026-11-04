@@ -1,0 +1,25 @@
+{
+  "task_id": "dcb6b2ee-3a10-4e9f-88cd-c83f2fa68ffd",
+  "video_path": "c:/ganar dinero/videos/por_que_el_mar_es_salado.mp4",
+  "qa_result": "PASS",
+  "score": "10/10",
+  "upgrades_verified": {
+    "subtitles_elevated_to_center": "PASS - Positioned at 58% height (well above mobile UI buttons/descriptions)",
+    "thumbnail_giant_centered_badge": "PASS - Badge 'SECRETO REVELADO' is centered, prominent and legible on small screens",
+    "canva_animated_outro": "PASS - Automatically appended at 35.3s, runs 4.2s with '+ SÍGUENOS' button and Edge-TTS audio"
+  },
+  "verification_frames": {
+    "04s": "Subtitles centered at 58% over ocean wave crest, dark capsule fully legible",
+    "15s": "Subtitles centered at 58% over coastal mineral deposits",
+    "28s": "Subtitles centered at 58% over turbulent ocean waves",
+    "37s": "Canva animated outro card with pulsing '+ SÍGUENOS' button and voiceover"
+  },
+  "technical_compliance": {
+    "aspect_ratio": "1080x1920 (9:16)",
+    "total_duration_sec": 39.5,
+    "subtitle_contrast_capsule": "CONFIRMED_ROUNDED_DARK_PILL_CENTERED",
+    "spanish_orthography": "PERFECT_UTF8",
+    "platform_agnostic_cta": "CONFIRMED (no mentions of YouTube/TikTok/Instagram)"
+  },
+  "validator": "video-qa-validator"
+}

@@ -1,0 +1,32 @@
+{
+  "qa_status": "PASS",
+  "validator": "video-qa-validator",
+  "timestamp": "2026-11-04T05:37:10",
+  "video_path": "c:\\ganar dinero\\videos\\misterio_espacio_exterior.mp4",
+  "technical_checks": {
+    "duration_seconds": 67.57,
+    "target_window": "62-72s",
+    "tiktok_rewards_qualified": true,
+    "resolution": "1080x1920",
+    "aspect_ratio": "9:16",
+    "frame_rate": 30.0,
+    "video_codec": "h264_nvenc",
+    "audio_codec": "aac",
+    "audio_sample_rate": 44100,
+    "audio_channels": 2
+  },
+  "visual_inspection": {
+    "subtitle_position": "58.0% from top (elevated / centered)",
+    "mobile_ui_safe": true,
+    "subtitle_contrast": "Rounded black capsule background, 100% readable",
+    "outro_attached": true,
+    "outro_type": "Canva luxury animated outro (+ SÍGUENOS)",
+    "frame_checks": [
+      {"timestamp": "5s", "status": "PASS", "note": "Solar flare / cosmic opening"},
+      {"timestamp": "25s", "status": "PASS", "note": "Ebullism explanation with clear centered subtitles"},
+      {"timestamp": "45s", "status": "PASS", "note": "Moon craters / extreme cold in cosmic shadow"},
+      {"timestamp": "62s", "status": "PASS", "note": "Spacecraft rescue cliffhanger, clean typography"},
+      {"timestamp": "66s", "status": "PASS", "note": "Canva outro card with pulsing call to action"}
+    ]
+  }
+}
