@@ -45,10 +45,10 @@ Ejecutar el ensamblado técnico del video en formato vertical `9:16` (`1080x1920
    - Posición vertical: `--subtitle-position custom --custom-position 58.0` (por encima de los botones de interacción de TikTok y la barra de título de Shorts).
    - Cápsula de contraste: fondo negro redondeado (`#000000`, alpha=140) con texto blanco para legibilidad absoluta sin importar el brillo del clip de fondo.
 
-5. **Anexión Dinámica de Outro (Canva o Plantilla Local):**
+5. **Anexión Dinámica de Outro Personalizado:**
    - Según la ficha del canal en `config/channels.json`:
      - Si `outro_mode == "canva"`: utiliza el outro dinámico generado por Canva.
-     - Si `outro_mode == "local"`: utiliza la plantilla local generada por Pillow/FFmpeg.
+     - Si `outro_mode == "local"`: genera automáticamente el outro personalizado para ese canal y video, utilizando el último fotograma del video real con desenfoque cinemático, la insignia del canal o nicho y la voz oficial unificada (sin repetir despedidas).
    - Concatena garantizando normalización de audio estéreo a 44.1 kHz.
 
 ---

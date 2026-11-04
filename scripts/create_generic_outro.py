@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
-Generic Short-Video Outro Generator
-Creates an animated 1080x1920 (9:16) outro video with a pulsing CTA button,
-Edge-TTS Spanish voiceover, and universal follow prompt for TikTok, Shorts, and Reels.
+Dynamic Per-Channel and Per-Video Short Outro Generator
+Creates an animated 1080x1920 (9:16) outro video tailored to the active channel and video footage.
+Features:
+- Contextual background extracted from the video's last frame with cinematic blur.
+- Channel name / niche branding on the top curiosity badge.
+- Edge-TTS voiceover using the channel's official voice without duplicate goodbyes.
+- Language adaptation (Spanish and English).
+- Pulsing high-contrast CTA button and ambient floating particles.
 """
 from __future__ import annotations
 
@@ -42,21 +47,73 @@ def generate_tts_audio(text: str, voice: str, out_path: str):
     subprocess.run(cmd, check=True)
 
 
+def extract_video_last_frame(video_path: str, out_img: str) -> bool:
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-sseof", "-1", "-i", video_path,
+            "-update", "1", "-q:v", "2", out_img
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        return res.returncode == 0 and os.path.exists(out_img)
+    except Exception as e:
+        print(f"Warning: Failed to extract frame from {video_path}: {e}")
+        return False
+
+
 def create_outro_video(
     output_path: str,
-    voice: str = "es-MX-JorgeNeural",
-    spoken_text: str = "¿Quieres saber más? ¡Síguenos y no te pierdas el próximo dato!",
-    cta_badge: str = "CURIOSIDAD DIARIA",
-    cta_title: str = "¿QUIERES SABER MÁS?",
-    button_text: str = "+ SÍGUENOS",
-    cta_subtitle: str = "Descubre los secretos que nadie te cuenta"
+    voice: str | None = None,
+    spoken_text: str | None = None,
+    cta_badge: str | None = None,
+    cta_title: str | None = None,
+    button_text: str | None = None,
+    cta_subtitle: str | None = None,
+    video_path: str | None = None,
+    source_frame: str | None = None,
+    channel_name: str | None = None,
+    niche: str | None = None,
+    language: str = "es"
 ):
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     temp_dir = output_path + ".temp_frames"
     os.makedirs(temp_dir, exist_ok=True)
 
+    is_english = (language or "es").lower().startswith("en")
+
+    # Smart badge: channel name or niche
+    if not cta_badge:
+        if channel_name:
+            cta_badge = channel_name.strip().upper()
+        elif niche:
+            cta_badge = niche.strip().upper()[:26]
+        else:
+            cta_badge = "EXPLORE MORE" if is_english else "DESCUBRE MÁS"
+
+    # Smart title
+    if not cta_title:
+        cta_title = "WANT TO SEE MORE?" if is_english else "¿QUIERES SABER MÁS?"
+
+    # Smart button
+    if not button_text:
+        button_text = "+ SUBSCRIBE" if is_english else "+ SUSCRÍBETE"
+
+    # Smart subtitle
+    if not cta_subtitle:
+        cta_subtitle = "Never miss our next discovery" if is_english else "No te pierdas el próximo descubrimiento"
+
+    # Smart spoken audio text (concise, single CTA, never duplicate goodbyes)
+    if not spoken_text:
+        spoken_text = "Subscribe now and never miss our next discovery!" if is_english else "¡Suscríbete ahora y no te pierdas el próximo descubrimiento!"
+
+    # Smart voice
+    if not voice:
+        voice = "en-US-ChristopherNeural" if is_english else "es-MX-JorgeNeural"
+
+    # Smart footer (bullet instead of special unicode to prevent missing glyphs)
+    icon_text = "•  NEW VIDEO EVERY DAY  •" if is_english else "•  NUEVO VIDEO CADA DÍA  •"
+
     audio_path = output_path + ".temp_audio.mp3"
-    print("Generating outro voiceover with Edge-TTS...")
+    print(f"Generating outro voiceover with Edge-TTS (voice: {voice})...")
     generate_tts_audio(spoken_text, voice, audio_path)
 
     # Get exact audio duration via ffprobe
@@ -77,20 +134,54 @@ def create_outro_video(
 
     # Pre-load fonts
     badge_font = get_font(size=36, bold=True)
-    title_font = get_font(size=72, bold=True)
-    btn_font = get_font(size=56, bold=True)
+    title_font = get_font(size=70, bold=True)
+    btn_font = get_font(size=54, bold=True)
     sub_font = get_font(size=36, bold=False)
 
-    # Pre-render static background gradient
-    base_bg = Image.new("RGBA", (w, h))
-    draw_bg = ImageDraw.Draw(base_bg)
-    for y in range(h):
-        ratio = y / h
-        # Deep cinematic dark navy to charcoal
-        r = int(12 * (1 - ratio) + 4 * ratio)
-        g = int(20 * (1 - ratio) + 6 * ratio)
-        b = int(38 * (1 - ratio) + 12 * ratio)
-        draw_bg.line([(0, y), (w, y)], fill=(r, g, b, 255))
+    # 1. Background image: extract and blur video frame if available
+    base_bg = None
+    frame_to_use = source_frame
+
+    if not frame_to_use and video_path and os.path.exists(video_path):
+        extracted_frame = os.path.join(temp_dir, "extracted_last_frame.jpg")
+        if extract_video_last_frame(video_path, extracted_frame):
+            frame_to_use = extracted_frame
+
+    if frame_to_use and os.path.exists(frame_to_use):
+        try:
+            img = Image.open(frame_to_use).convert("RGBA")
+            target_ratio = w / h
+            img_ratio = img.width / img.height
+            if img_ratio > target_ratio:
+                new_h = h
+                new_w = int(h * img_ratio)
+            else:
+                new_w = w
+                new_h = int(w / img_ratio)
+            img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            left = (new_w - w) // 2
+            top = (new_h - h) // 2
+            base_bg = img_resized.crop((left, top, left + w, top + h))
+            # Apply smooth cinematic blur
+            base_bg = base_bg.filter(ImageFilter.GaussianBlur(radius=28))
+            # Overlay a dark tint layer for maximum legibility and contrast
+            overlay = Image.new("RGBA", (w, h), (8, 12, 22, 160))
+            base_bg = Image.alpha_composite(base_bg, overlay)
+            print(f"Personalized outro background built from footage: {frame_to_use}")
+        except Exception as e:
+            print(f"Warning: Could not process background frame: {e}")
+            base_bg = None
+
+    if base_bg is None:
+        # Fallback to dark cinematic navy gradient
+        base_bg = Image.new("RGBA", (w, h))
+        draw_bg = ImageDraw.Draw(base_bg)
+        for y in range(h):
+            ratio = y / h
+            r = int(12 * (1 - ratio) + 4 * ratio)
+            g = int(20 * (1 - ratio) + 6 * ratio)
+            b = int(38 * (1 - ratio) + 12 * ratio)
+            draw_bg.line([(0, y), (w, y)], fill=(r, g, b, 255))
 
     # Pre-calculate particle positions
     num_particles = 35
@@ -107,20 +198,19 @@ def create_outro_video(
         frame = base_bg.copy()
         draw = ImageDraw.Draw(frame)
 
-        # 1. Floating ambient particles
+        # Floating ambient particles
         for p in particles:
             py = int((h - (t * p["speed"] * 100 + p["seed"])) % h)
             px = int(p["x"] + 15 * math.sin((t * 2 + p["seed"]) * 0.5))
             r = p["radius"]
             draw.ellipse([px - r, py - r, px + r, py + r], fill=(255, 235, 59, p["alpha"]))
 
-        # 2. Glowing central ambient light behind button
+        # Glowing central ambient light behind button
         glow_pulse = 0.85 + 0.15 * math.sin(t * math.pi * 2 * 1.5)
-        glow_radius = int(350 * glow_pulse)
         center_x = w // 2
         center_y = int(h * 0.52)
 
-        # 3. Top Curiosity Badge
+        # Top Badge: Channel Name / Niche
         bbox_badge = badge_font.getbbox(cta_badge)
         bw = bbox_badge[2] - bbox_badge[0]
         bh = bbox_badge[3] - bbox_badge[1]
@@ -129,20 +219,20 @@ def create_outro_video(
         by0 = badge_y - 12
         bx1 = bx0 + bw + 50
         by1 = by0 + bh + 24
-        draw.rounded_rectangle([bx0, by0, bx1, by1], radius=16, fill=(255, 235, 59, 220))
+        draw.rounded_rectangle([bx0, by0, bx1, by1], radius=16, fill=(255, 235, 59, 230))
         draw.text(((w - bw) // 2, badge_y - bbox_badge[1]), cta_badge, font=badge_font, fill="#000000")
 
-        # 4. Bold Centered Question / Hook
+        # Bold Centered Question / Hook
         bbox_title = title_font.getbbox(cta_title)
         tw = bbox_title[2] - bbox_title[0]
         title_y = int(h * 0.36)
         draw.text(((w - tw) // 2 + 3, title_y + 3), cta_title, font=title_font, fill="#000000", stroke_width=4, stroke_fill="#000000")
         draw.text(((w - tw) // 2, title_y), cta_title, font=title_font, fill="#FFFFFF", stroke_width=2, stroke_fill="#000000")
 
-        # 5. Pulsing CTA Button
+        # Pulsing CTA Button
         btn_scale = 1.0 + 0.05 * math.sin(t * math.pi * 2 * 1.5)
-        btn_w = int(480 * btn_scale)
-        btn_h = int(110 * btn_scale)
+        btn_w = int(500 * btn_scale)
+        btn_h = int(114 * btn_scale)
         btn_x0 = center_x - btn_w // 2
         btn_y0 = center_y - btn_h // 2
         btn_x1 = btn_x0 + btn_w
@@ -168,7 +258,7 @@ def create_outro_video(
         )
 
         # Button Text
-        current_btn_font = get_font(size=int(52 * btn_scale), bold=True)
+        current_btn_font = get_font(size=int(50 * btn_scale), bold=True)
         bbox_btn = current_btn_font.getbbox(button_text)
         btn_txt_w = bbox_btn[2] - bbox_btn[0]
         btn_txt_h = bbox_btn[3] - bbox_btn[1]
@@ -176,14 +266,13 @@ def create_outro_video(
         btn_txt_y = center_y - btn_txt_h // 2 - bbox_btn[1]
         draw.text((btn_txt_x, btn_txt_y), button_text, font=current_btn_font, fill="#FFFFFF", stroke_width=2, stroke_fill="#000000")
 
-        # 6. Subtitle / Value Promise
+        # Subtitle / Value Promise
         bbox_sub = sub_font.getbbox(cta_subtitle)
         sw = bbox_sub[2] - bbox_sub[0]
         sub_y = int(h * 0.65)
-        draw.text(((w - sw) // 2, sub_y), cta_subtitle, font=sub_font, fill=(200, 210, 230, 240))
+        draw.text(((w - sw) // 2, sub_y), cta_subtitle, font=sub_font, fill=(210, 225, 245, 240))
 
-        # 7. Subtle platform icons hint (Checkmark / Bell)
-        icon_text = "✦  NUEVO VIDEO CADA DÍA  ✦"
+        # Platform / Schedule Hint
         bbox_ico = badge_font.getbbox(icon_text)
         iw = bbox_ico[2] - bbox_ico[0]
         draw.text(((w - iw) // 2, int(h * 0.72)), icon_text, font=badge_font, fill=(255, 235, 59, 210))
@@ -203,11 +292,13 @@ def create_outro_video(
         "-r", "30",
         "-c:a", "aac",
         "-b:a", "192k",
+        "-ar", "44100",
+        "-ac", "2",
         "-shortest",
         output_path
     ]
     subprocess.run(ffmpeg_cmd, check=True)
-    print(f"Generic outro successfully created: {output_path}")
+    print(f"Personalized outro successfully created: {output_path}")
 
     # Clean up temp frames and audio
     shutil.rmtree(temp_dir, ignore_errors=True)
@@ -216,13 +307,35 @@ def create_outro_video(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create generic short video outro.")
+    parser = argparse.ArgumentParser(description="Create personalized short video outro.")
     parser.add_argument("--output", default=os.path.join(ROOT_DIR, "assets", "outro_generico.mp4"), help="Output MP4 path")
-    parser.add_argument("--voice", default="es-MX-JorgeNeural", help="Edge-TTS voice name")
-    parser.add_argument("--text", default="¿Quieres saber más? ¡Síguenos y no te pierdas el próximo dato!", help="Spoken CTA")
+    parser.add_argument("--video-path", default=None, help="Video path to extract last frame from for blurred background")
+    parser.add_argument("--source-frame", default=None, help="Direct frame path to use for background")
+    parser.add_argument("--channel-name", default=None, help="Channel name for top badge")
+    parser.add_argument("--niche", default=None, help="Channel niche or topic")
+    parser.add_argument("--language", default="es", choices=["es", "en"], help="Language code")
+    parser.add_argument("--voice", default=None, help="Edge-TTS voice name")
+    parser.add_argument("--text", default=None, help="Spoken CTA text")
+    parser.add_argument("--badge", default=None, help="Override badge text")
+    parser.add_argument("--title", default=None, help="Override title text")
+    parser.add_argument("--button", default=None, help="Override button text")
+    parser.add_argument("--subtitle", default=None, help="Override subtitle text")
     args = parser.parse_args()
 
-    create_outro_video(args.output, voice=args.voice, spoken_text=args.text)
+    create_outro_video(
+        output_path=args.output,
+        voice=args.voice,
+        spoken_text=args.text,
+        cta_badge=args.badge,
+        cta_title=args.title,
+        button_text=args.button,
+        cta_subtitle=args.subtitle,
+        video_path=args.video_path,
+        source_frame=args.source_frame,
+        channel_name=args.channel_name,
+        niche=args.niche,
+        language=args.language
+    )
 
 
 if __name__ == "__main__":

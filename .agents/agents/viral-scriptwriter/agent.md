@@ -51,8 +51,11 @@ Transformar el `trend_brief.json` en un guión hipnótico calibrado con precisi�
    Explica el secreto, mecanismo o historia con lenguaje directo, sin relleno ni tecnicismos aburridos.
 4. **Compás 4 (45-62s) - Giro Inesperado (Mind-Blowing Twist):**  
    Un segundo dato o revelación de escala monumental que eleva la sorpresa.
-5. **Compás 5 (62-70s) - Cierre y Conexión con el Outro:**  
-   Pregunta de enganche al espectador que enlaza perfectamente con la tarjeta de cierre.
+5. **Compás 5 (62-70s) - Cierre y Conexión con el Outro (Open Loop Puro):**  
+   - Termina en lo más alto con una pregunta provocativa, dilema ético o reflexión inquietante dirigida a la audiencia (ej. *"¿Y tú, aguantarías el combate o cortarías la línea?"* o *"¿Te atreverías a poner un pie en este mundo?"*) para disparar el debate en comentarios.
+   - **PROHIBICIÓN ABSOLUTA DE DESPEDIDAS Y LLAMADOS A LA ACCIÓN (CERO DOBLE DESPEDIDA):**  
+     El guión hablado principal **NUNCA DEBE CONTENER** llamados de suscripción ni despedidas (*"suscríbete"*, *"síguenos"*, *"dale like"*, *"comparte"*, *"nos vemos en el próximo video"*, *"hasta la próxima"*).  
+     El llamado a la acción (CTA) y despedida es función **exclusiva de la tarjeta final animada (Outro)**. Si el guionista redacta una despedida en el guión, el espectador escucharía dos despedidas seguidas en menos de 5 segundos, arruinando la retención.
 
 ---
 

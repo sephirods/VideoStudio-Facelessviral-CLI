@@ -82,6 +82,7 @@ def main():
     parser.add_argument("--materials-json", default=None, help="Path to approved_materials.json (for render mode)")
     parser.add_argument("--task-id", default=None, help="Task UUID")
     parser.add_argument("--output-video", default=None, help="Destination MP4 path (e.g. videos/slug.mp4)")
+    parser.add_argument("--channel", default=None, help="Channel identifier or name for personalized outro")
     parser.add_argument("--no-outro", action="store_true", help="Disable automatic outro appending")
     args = parser.parse_args()
 
@@ -167,14 +168,86 @@ def main():
             print(f"Warning: Expected final video not found at {raw_final}")
             return ret
 
-        outro_path = os.path.join(ROOT_DIR, "assets", "outro_generico.mp4")
         dest_path = args.output_video or raw_final
 
-        if not args.no_outro and os.path.exists(outro_path):
-            temp_out = raw_final + ".with_outro.mp4"
-            append_outro(raw_final, outro_path, temp_out)
-            shutil.move(temp_out, dest_path)
-            print(f"Render and outro append complete: {dest_path}")
+        if not args.no_outro:
+            # 1. Resolve channel metadata for personalization
+            channel_name = None
+            niche = None
+            channel_voice = None
+            channel_lang = None
+            channels_file = os.path.join(ROOT_DIR, "config", "channels.json")
+            if os.path.exists(channels_file):
+                try:
+                    with open(channels_file, "r", encoding="utf-8") as f:
+                        ch_data = json.load(f)
+                    active_id = args.channel or ch_data.get("active_default_channel")
+                    channels = ch_data.get("channels", {})
+                    if active_id and active_id in channels:
+                        ch_info = channels[active_id]
+                    elif len(channels) == 1:
+                        ch_info = next(iter(channels.values()))
+                    else:
+                        ch_info = {}
+                    channel_name = ch_info.get("name")
+                    niche = ch_info.get("niche")
+                    channel_voice = ch_info.get("voice_preference")
+                    channel_lang = ch_info.get("language")
+                except Exception:
+                    pass
+
+            # Fallback to script_data fields if present
+            if not channel_name and script_data.get("channel_name"):
+                channel_name = script_data.get("channel_name")
+            if not channel_name and script_data.get("channel"):
+                channel_name = str(script_data.get("channel")).replace("_", " ").title()
+            if not niche and script_data.get("niche"):
+                niche = script_data.get("niche")
+
+            language = script_data.get("language", channel_lang or "es")
+            outro_voice = script_data.get("voice_name", channel_voice or voice_name)
+
+            # 2. Generate personalized outro with video's last frame blurred
+            temp_dynamic_outro = raw_final + ".dynamic_outro.mp4"
+            outro_to_use = None
+            try:
+                scripts_dir = os.path.join(ROOT_DIR, "scripts")
+                if scripts_dir not in sys.path:
+                    sys.path.insert(0, scripts_dir)
+                from create_generic_outro import create_outro_video
+                print(f"Generating personalized outro (Channel: '{channel_name}', Voice: '{outro_voice}', Lang: '{language}')...")
+                create_outro_video(
+                    output_path=temp_dynamic_outro,
+                    video_path=raw_final,
+                    channel_name=channel_name,
+                    niche=niche,
+                    language=language,
+                    voice=outro_voice
+                )
+                if os.path.exists(temp_dynamic_outro):
+                    outro_to_use = temp_dynamic_outro
+            except Exception as e:
+                print(f"Warning: Failed to generate personalized outro ({e}). Checking for generic outro fallback...")
+
+            if not outro_to_use:
+                generic_fallback = os.path.join(ROOT_DIR, "assets", "outro_generico.mp4")
+                if os.path.exists(generic_fallback):
+                    outro_to_use = generic_fallback
+
+            if outro_to_use and os.path.exists(outro_to_use):
+                temp_out = raw_final + ".with_outro.mp4"
+                append_outro(raw_final, outro_to_use, temp_out)
+                shutil.move(temp_out, dest_path)
+                print(f"Render and personalized outro complete: {dest_path}")
+                # Clean up temporary dynamic outro
+                if outro_to_use == temp_dynamic_outro and os.path.exists(temp_dynamic_outro):
+                    try:
+                        os.remove(temp_dynamic_outro)
+                    except Exception:
+                        pass
+            elif args.output_video:
+                shutil.copy2(raw_final, args.output_video)
+                print(f"Copied final video (no outro available) to: {args.output_video}")
         elif args.output_video:
             shutil.copy2(raw_final, args.output_video)
             print(f"Copied final video to: {args.output_video}")
