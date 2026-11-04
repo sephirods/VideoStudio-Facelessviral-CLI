@@ -77,10 +77,13 @@ def produce_for_channel(channel_id: str, topic: str = None):
     channel_name = channel.get("name", channel_id)
     niche = channel.get("niche", "")
     purpose = channel.get("purpose", "monetization")
+    language = channel.get("language", "es")
+    voice_pref = channel.get("voice_preference", "es-MX-JorgeNeural" if language == "es" else "en-US-ChristopherNeural")
 
     print("\n" + "=" * 65)
     print(f"  DISPARADOR DE PRODUCCION: {channel_name.upper()}")
-    print(f"  Nicho: {niche} | Propósito: {purpose}")
+    print(f"  Nicho: {niche} | Idioma: {language.upper()} | Voz Oficial: {voice_pref}")
+    print(f"  Propósito: {purpose} | Duración: 62-72s (Monetización)")
     print(f"  Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 65)
 
@@ -92,7 +95,7 @@ def produce_for_channel(channel_id: str, topic: str = None):
     intel_path = os.path.join(run_dir, "viral_intelligence.json")
     fetch_script = os.path.join(ROOT_DIR, "scripts", "fetch_viral_intelligence.py")
     if os.path.exists(fetch_script):
-        subprocess.run([sys.executable, fetch_script, "--topic", search_topic, "--output", intel_path])
+        subprocess.run([sys.executable, fetch_script, "--topic", search_topic, "--lang", language, "--output", intel_path])
 
     print("\n[Paso 2/4] Producción audiovisual completada bajo las reglas del canal.")
     print(f"Archivos y manifiesto listos en: {run_dir}")

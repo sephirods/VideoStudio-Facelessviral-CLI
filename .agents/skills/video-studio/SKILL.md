@@ -16,9 +16,11 @@ Sistema de producción audiovisual desatendido con 9 subagentes especializados y
 | Componente | Ruta | Acción |
 |---|---|---|
 | **Instalador y Dependencias** | `scripts/setup_environment.py` | Audita Python, FFmpeg, dependencias y 9/9 subagentes. |
-| **Canales y Perfiles** | `config/channels.json` | Configuración del canal activo, nicho, plataformas y estilo. |
+| **Knowledge Graph Maestro** | `KNOWLEDGE_GRAPH.md` | Ontología, RACI de responsabilidades y flujo de datos. |
+| **Canales y Perfiles** | `config/channels.json` | Configuración del canal activo, idioma, voz y nicho. |
+| **Plantilla de Canales** | `config/channels.example.json` | Esquema de referencia para registrar nuevos canales. |
 | **Aceleración Hardware** | `config/hardware.json` | Configuración de GPU detectada (`h264_nvenc` en RTX 3070). |
-| **Onboarding y Grill-Me** | `SETUP_ONBOARDING.md` | Protocolo guiado de bienvenida, canales y diagnóstico. |
+| **Onboarding y Grill-Me** | `SETUP_ONBOARDING.md` | Protocolo guiado de bienvenida, canales, idioma y voces. |
 | **Contrato Maestro** | `AGENTS.md` / `AGENT.md` | Reglas de despacho, gatekeeping estricto y paralelismo. |
 | **Subagentes Especialistas** | `.agents/agents/<nombre>/agent.md` | Definición de los 9 especialistas de producción. |
 | **Entregables Finales** | `videos/publicaciones/[CANAL]/` | Paquetes aprobados con video, miniatura y copy. |
@@ -27,15 +29,15 @@ Sistema de producción audiovisual desatendido con 9 subagentes especializados y
 
 ## 🤖 Los 9 Subagentes Especializados
 
-1. **`trend-researcher`**: Analiza tendencias con Google Trends y feeds virales. Emite `trend_brief.json`.
-2. **`viral-scriptwriter`**: Redacta guiones hipnóticos de 5 compases (140-165 palabras, 62-72s para Creator Rewards). Emite `video_script.json`.
-3. **`viral-copywriter`**: Inteligencia de competencia con YouTube Autocomplete. Título <70 caracteres, tags doble capa y comentario de debate. Emite `viral_metadata.json`.
-4. **`visual-asset-reviewer`**: Descarga y audita stock en 4 hilos paralelos. Emite `approved_materials.json`.
-5. **`video-renderer`**: Ensambla con aceleración de hardware (NVENC), subtítulos al 58% con cápsula negra y outro. Emite `video_final.mp4`.
-6. **`video-qa-validator`**: Gatekeeper multi-segundo (5s, 25s, 45s, 62s). Emite `qa_certificate.json` (PASS/FAIL).
-7. **`thumbnail-designer`**: Se despacha **solo tras QA PASS**. Extrae frame heroico real y genera badge 74px amarillo eléctrico. Emite `miniatura_viral.jpg`.
+1. **`trend-researcher`**: Analiza tendencias con Google Trends adaptadas por idioma (ES/EN) y feeds virales. Emite `trend_brief.json`.
+2. **`viral-scriptwriter`**: Redacta guiones hipnóticos de 5 compases (140-165 palabras ES / 155-180 palabras EN, duración obligatoria 62-72s para monetización en todos los canales) e inyecta la voz oficial. Emite `video_script.json`.
+3. **`viral-copywriter`**: Inteligencia de competencia con `yt-dlp` y YouTube Autocomplete. Título <70 caracteres, tags doble capa y comentario de debate. Emite `viral_metadata.json`.
+4. **`visual-asset-reviewer`**: Descarga y audita stock en 4 hilos paralelos. Prohibido reciclaje ciego de caché. Emite `approved_materials.json`.
+5. **`video-renderer`**: Ensambla con aceleración de hardware (NVENC/AMF/CPU), voz oficial fija, BGM 0.2 (-20 dB), subtítulos al 58% con cápsula negra y outro dinámico. Emite `video_final.mp4`.
+6. **`video-qa-validator`**: Gatekeeper multi-segundo (5s, 25s, 45s, 62s, 66s). Verifica rango universal de monetización 62-72s. Emite `qa_certificate.json` (PASS/FAIL).
+7. **`thumbnail-designer`**: Se despacha **solo tras QA PASS**. Extrae frame heroico real del video aprobado y genera badge 74px amarillo eléctrico. Emite `miniatura_viral.jpg`.
 8. **`packaging-archiver`**: Crea la carpeta fechada `videos/publicaciones/[CANAL]/[FECHA]_[slug]/`, redacta `copy_publicacion.txt` y purga la caché pesada.
-9. **`social-media-publisher`**: Publicación desatendida en plataformas configuradas.
+9. **`social-media-publisher`**: Publicación desatendida en plataformas configuradas con sesiones aisladas.
 
 ---
 

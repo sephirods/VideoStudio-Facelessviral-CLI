@@ -3,12 +3,14 @@
   "channels": {
     "canal_ejemplo": {
       "name": "Mente Oculta",
+      "language": "es",
       "niche": "Psicología, Curiosidades y Secretos",
       "purpose": "monetization",
       "target_duration_seconds": [
         62,
         72
       ],
+      "voice_preference": "es-MX-JorgeNeural",
       "platforms": [
         "youtube_shorts",
         "tiktok",

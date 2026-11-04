@@ -81,8 +81,22 @@ def step_check_engine():
         return None
 
 
+def step_check_stock_api():
+    print_header("5. Verificando Credenciales de APIs de Stock (Pixabay / Pexels)")
+    cfg_script = os.path.join(ROOT_DIR, "scripts", "configure_stock_api.py")
+    if os.path.exists(cfg_script):
+        try:
+            sys.path.insert(0, os.path.join(ROOT_DIR, "scripts"))
+            import configure_stock_api
+            configure_stock_api.check_and_prompt_if_needed()
+        except Exception as e:
+            print(f"Aviso al verificar APIs de stock: {e}")
+    else:
+        print("Aviso: configure_stock_api.py no encontrado.")
+
+
 def step_detect_hardware():
-    print_header("5. Auditando Aceleracion de Hardware de Video")
+    print_header("6. Auditando Aceleracion de Hardware de Video")
     detect_script = os.path.join(ROOT_DIR, "scripts", "detect_hardware.py")
     if os.path.exists(detect_script):
         subprocess.call([sys.executable, detect_script])
@@ -91,7 +105,7 @@ def step_detect_hardware():
 
 
 def step_ensure_directories():
-    print_header("6. Inicializando Estructura de Carpetas")
+    print_header("7. Inicializando Estructura de Carpetas")
     dirs = [
         "config",
         "assets/b-roll",
@@ -113,7 +127,7 @@ def step_ensure_directories():
 
 
 def step_verify_subagents():
-    print_header("7. Verificando Definicion de Subagentes")
+    print_header("8. Verificando Definicion de Subagentes")
     agents_dir = os.path.join(ROOT_DIR, ".agents", "agents")
     expected = [
         "trend-researcher",
@@ -143,6 +157,7 @@ def main():
     step_install_dependencies()
     step_check_ffmpeg()
     step_check_engine()
+    step_check_stock_api()
     step_detect_hardware()
     step_ensure_directories()
     step_verify_subagents()

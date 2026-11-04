@@ -110,12 +110,38 @@ def main():
 
     if args.mode == "materials":
         terms_csv = script_data.get("video_terms_csv", "")
-        argv.extend([
-            "--video-source", "pixabay",
+        # Determinar proveedor dinámico de stock (Pixabay, Pexels o Híbrido)
+        try:
+            import configure_stock_api
+            stock_source = configure_stock_api.get_active_stock_source()
+            creds = configure_stock_api.load_stock_credentials()
+            is_both_mode = (creds.get("provider_mode") == "both" and
+                            bool(creds.get("pexels_api_keys")) and
+                            bool(creds.get("pixabay_api_keys")))
+        except Exception:
+            stock_source = "pixabay"
+            is_both_mode = False
+
+        argv_materials = list(argv)
+        argv_materials.extend([
+            "--video-source", stock_source,
             "--video-terms", terms_csv,
             "--stop-at", "materials"
         ])
-        return cli.run_cli(argv)
+        ret = cli.run_cli(argv_materials)
+
+        # Si estamos en modo Híbrido y Pexels falla o está saturado, respaldar automáticamente con Pixabay
+        if is_both_mode and ret != 0 and stock_source == "pexels":
+            print("Aviso: Reintentando descarga con Pixabay como respaldo automático...")
+            argv_fallback = list(argv)
+            argv_fallback.extend([
+                "--video-source", "pixabay",
+                "--video-terms", terms_csv,
+                "--stop-at", "materials"
+            ])
+            return cli.run_cli(argv_fallback)
+
+        return ret
 
     elif args.mode == "render":
         if not args.materials_json:

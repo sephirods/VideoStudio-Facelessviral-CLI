@@ -1,5 +1,6 @@
 # Almacén de sesiones y cookies privadas (NUNCA SUBIR A GIT)
 config/sessions/
+config/stock_credentials.json
 *.json.bak
 
 # Archivos pesados, descargas y entregables generados

@@ -81,3 +81,10 @@ Guarda en la carpeta fechada y reporta al Orquestador:
   "status": "ready_for_distribution"
 }
 ```
+
+---
+
+## Protocolo de Comunicación y Cadena de Reglas
+1. **Antes de Iniciar:** Este subagente debe leer obligatoriamente este archivo de reglas antes de ejecutar cualquier acción.
+2. **Al Comunicarse con Otro Subagente:** Si pasa el relevo o solicita insumos a otro especialista, debe incluir la ruta del archivo de reglas del receptor (.agents/agents/<receptor>/agent.md) con la orden: OBLIGATORIO LEER ANTES DE ACTUAR.
+3. **Al Reportar al Orquestador:** Al entregar su artefacto final verificado en disco, debe notificar al Orquestador recordándole su archivo maestro: AGENTS.md con la orden: OBLIGATORIO LEER ANTES DE ACTUAR.
