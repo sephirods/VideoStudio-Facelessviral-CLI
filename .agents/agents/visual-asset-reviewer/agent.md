@@ -33,13 +33,20 @@ Garantizar que el 100% de los clips de video que se ensamblen en el video final 
 - Jamás mezclar clips de naturaleza, mar, gatos, espacio u otros nichos en guiones de finanzas, negocios o misterio.
 - Si la caché contiene material ajeno al tema, se ignora por completo y se descargan nuevos clips específicos.
 
-### B. Criterios de Rechazo Inmediato (Discalificación Obligatoria):
-El subagente debe extraer un fotograma testigo de cada clip descargado con FFmpeg y visualizarlo con `read_file`. Debe rechazar tajantemente:
-1. **Modelos y Renders 3D Baratos:** Edificios de arcilla/plastilina gris, wireframes, figuras poligonales o renders estilizados.
-2. **Fondos Planos / Vacíos:** Animaciones u objetos flotando sobre fondo completamente blanco, negro o color sólido uniforme.
-3. **Diagramas y Gráficos 2D:** Ilustraciones estáticas, dibujos planos o gráficos vectoriales.
-4. **Desconexión Temática:** Cualquier clip cuyo sujeto no tenga relación directa con lo que narra el guion.
-5. **Defectos Técnicos:** Marcas de agua, pantalla verde, tomas borrosas o encuadres horizontales con barras negras.
+### B. Auditoría Visual Rápida por Mosaico de Contacto (1 Sola Mirada Panorámica):
+- **PROHIBIDO inspeccionar clips uno por uno:** Para no malgastar minutos ni agotar créditos en 20 llamadas secuenciales, el subagente genera la cuadrícula unificada de contacto:
+  ```bash
+  python scripts/generate_contact_sheet.py --clips-dir "pipeline_runs/<run>/clips" --output "pipeline_runs/<run>/mosaico_clips.jpg"
+  ```
+- **Inspección en 1 Golpe de Vista:** El subagente llama a `read_file` **UNA SOLA VEZ** sobre `mosaico_clips.jpg`.
+- En esa única imagen panorámica observa todos los fotogramas numerados (`#01`, `#02`, `#03`...).
+- Consulta el archivo `mosaico_clips_map.json` y descarta los números de celdas que presenten:
+  1. **Modelos y Renders 3D Baratos:** Edificios de arcilla/plastilina gris, wireframes, figuras poligonales o renders estilizados.
+  2. **Fondos Planos / Vacíos:** Animaciones u objetos flotando sobre fondo completamente blanco, negro o color sólido uniforme.
+  3. **Diagramas y Gráficos 2D:** Ilustraciones estáticas, dibujos planos o gráficos vectoriales.
+  4. **Desconexión Temática:** Cualquier clip cuyo sujeto no tenga relación directa con lo que narra el guion.
+  5. **Defectos Técnicos:** Marcas de agua, pantalla verde, tomas borrosas o encuadres horizontales con barras negras.
+- Aprueba los números limpios y genera `approved_materials.json` en menos de 4 segundos.
 
 ### C. Descarga Complementaria si Falta Material:
 - Si tras auditar y rechazar clips quedan menos de los necesarios para cubrir la duración del video (mínimo 14-16 clips aprobados de 4 segundos), el agente **debe descargar clips adicionales** usando términos enriquecidos con palabras clave cinematográficas (`cinematic 4k vertical real footage`, `documentary real life`).
