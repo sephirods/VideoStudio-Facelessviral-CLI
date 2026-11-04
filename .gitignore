@@ -2,13 +2,32 @@
 config/sessions/
 *.json.bak
 
-# Archivos pesados y temporales
-videos/descargas_stock/
-videos/temp/
+# Archivos pesados, descargas y entregables generados
 pipeline_runs/
+videos/*
+!videos/.gitkeep
+!videos/publicaciones/
+!videos/publicaciones/.gitkeep
+!videos/biblioteca_stock/
+!videos/biblioteca_stock/.gitkeep
+videos/publicaciones/*
+!videos/publicaciones/.gitkeep
+videos/biblioteca_stock/*
+!videos/biblioteca_stock/.gitkeep
+
+# Motor clonado localmente (para no duplicar repositorios externos en Git)
+engine/
+
+# Archivos multimedia generados (excepto plantillas en assets/)
 *.mp4
 *.mp3
 *.wav
+*.jpg
+*.jpeg
+*.png
+!assets/*.jpg
+!assets/*.png
+!assets/*.mp4
 
 # Python y entornos
 __pycache__/

@@ -17,8 +17,13 @@ import subprocess
 import sys
 import uuid
 
-# Ensure MoneyPrinterTurbo is on the import path
-ENGINE_DIR = r"C:\MoneyPrinterTurbo"
+# Ensure MoneyPrinterTurbo is on the import path dynamically
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ENGINE_CANDIDATES = [
+    r"C:\MoneyPrinterTurbo",
+    os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo")
+]
+ENGINE_DIR = next((p for p in ENGINE_CANDIDATES if os.path.exists(p)), r"C:\MoneyPrinterTurbo")
 if ENGINE_DIR not in sys.path:
     sys.path.insert(0, ENGINE_DIR)
 

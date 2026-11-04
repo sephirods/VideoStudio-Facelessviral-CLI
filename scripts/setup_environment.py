@@ -48,8 +48,34 @@ def step_check_ffmpeg():
         print("ADVERTENCIA: FFmpeg no se encontro en el PATH del sistema.", file=sys.stderr)
         print("Instalalo antes de renderizar videos (https://ffmpeg.org/download.html)", file=sys.stderr)
 
+def step_check_engine():
+    print_header("4. Verificando Motor de Video (MoneyPrinterTurbo)")
+    engine_paths = [
+        r"C:\MoneyPrinterTurbo",
+        os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo")
+    ]
+    found_path = next((p for p in engine_paths if os.path.exists(p)), None)
+    if found_path:
+        print(f"Motor de video detectado en: {found_path}")
+        return found_path
+
+    target_dir = os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo")
+    print(f"Motor no detectado. Clonando repositorio oficial en {target_dir}...")
+    try:
+        os.makedirs(os.path.dirname(target_dir), exist_ok=True)
+        subprocess.check_call(["git", "clone", "https://github.com/harry0703/MoneyPrinterTurbo.git", target_dir])
+        req_file = os.path.join(target_dir, "requirements.txt")
+        if os.path.exists(req_file):
+            print("Instalando requerimientos del motor...")
+            subprocess.call([sys.executable, "-m", "pip", "install", "-r", req_file, "--quiet"])
+        print("Motor de video instalado y configurado.")
+        return target_dir
+    except Exception as e:
+        print(f"Aviso al descargar motor: {e}. Puedes clonarlo en C:\\MoneyPrinterTurbo manualmente.")
+        return None
+
 def step_detect_hardware():
-    print_header("4. Auditando Aceleracion de Hardware de Video")
+    print_header("5. Auditando Aceleracion de Hardware de Video")
     detect_script = os.path.join(ROOT_DIR, "scripts", "detect_hardware.py")
     if os.path.exists(detect_script):
         subprocess.call([sys.executable, detect_script])
@@ -57,11 +83,12 @@ def step_detect_hardware():
         print("Aviso: detect_hardware.py no encontrado.")
 
 def step_ensure_directories():
-    print_header("5. Inicializando Estructura de Carpetas")
+    print_header("6. Inicializando Estructura de Carpetas")
     dirs = [
         "config",
         "assets/b-roll",
         "videos/publicaciones",
+        "videos/biblioteca_stock",
         "pipeline_runs",
         "storage/local_videos"
     ]
@@ -105,6 +132,7 @@ def main():
     step_check_python()
     step_install_dependencies()
     step_check_ffmpeg()
+    step_check_engine()
     step_detect_hardware()
     step_ensure_directories()
     step_verify_subagents()
