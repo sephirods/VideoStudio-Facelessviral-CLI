@@ -28,6 +28,15 @@ if ENGINE_DIR not in sys.path:
     sys.path.insert(0, ENGINE_DIR)
 
 if os.path.exists(ENGINE_DIR):
+    # Auto-switch to engine's virtual environment if current python lacks dependencies
+    venv_py = os.path.join(ENGINE_DIR, ".venv", "Scripts", "python.exe") if sys.platform.startswith("win") else os.path.join(ENGINE_DIR, ".venv", "bin", "python")
+    if os.path.exists(venv_py) and sys.executable.lower() != os.path.abspath(venv_py).lower():
+        try:
+            import loguru
+        except ImportError:
+            res = subprocess.run([venv_py] + sys.argv)
+            sys.exit(res.returncode)
+
     os.chdir(ENGINE_DIR)
     import cli
 else:
