@@ -14,13 +14,13 @@ Este repositorio contiene la arquitectura completa, portátil y lista para produ
 
 | Archivo / Carpeta | Función Principal |
 |---|---|
-| [`scripts/setup_environment.py`](file:///c:/ganar%20dinero/scripts/setup_environment.py) | **Instalador 1 Clic:** Audita Python >= 3.10, FFmpeg, instala librerías, detecta hardware y valida 9/9 agentes. |
-| [`SETUP_ONBOARDING.md`](file:///c:/ganar%20dinero/SETUP_ONBOARDING.md) | **Protocolo Onboarding (Paso 0):** Entrevista guiada "Grill-Me", vinculación interactiva de cuentas y cadencia. |
-| [`AGENTS.md`](file:///c:/ganar%20dinero/AGENTS.md) / [`AGENT.md`](file:///c:/ganar%20dinero/AGENT.md) | **Contrato del Orquestador:** Reglas de despacho, gatekeeping estricto, macro-paralelismo y tiempos. |
+| [`scripts/setup_environment.py`](scripts/setup_environment.py) | **Instalador 1 Clic:** Audita Python >= 3.10, FFmpeg, instala librerías, detecta hardware y valida 9/9 agentes. |
+| [`SETUP_ONBOARDING.md`](SETUP_ONBOARDING.md) | **Protocolo Onboarding (Paso 0):** Entrevista guiada "Grill-Me", vinculación interactiva de cuentas y cadencia. |
+| [`AGENTS.md`](AGENTS.md) / [`AGENT.md`](AGENT.md) | **Contrato del Orquestador:** Reglas de despacho, gatekeeping estricto, macro-paralelismo y tiempos. |
 | `.agents/agents/<nombre>/agent.md` | **Directorio de los 9 Subagentes:** Misión, herramientas y especificación de entregables. |
-| [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) | **Fichas de Canales:** Configuración de canales activos, nichos, plataformas y estilo. |
+| [`config/channels.json`](config/channels.json) | **Fichas de Canales:** Configuración de canales activos, nichos, plataformas y estilo. |
 | `config/sessions/[canal]/` | **Almacén de Sesiones:** Credenciales y cookies aisladas por canal (protegidas por `.gitignore`). |
-| [`config/hardware.json`](file:///c:/ganar%20dinero/config/hardware.json) | **Hardware Doctor:** Encoder detectado (`h264_nvenc`, `h264_amf`, `h264_videotoolbox` o CPU) y concurrencia. |
+| [`config/hardware.json`](config/hardware.json) | **Hardware Doctor:** Encoder detectado (`h264_nvenc`, `h264_amf`, `h264_videotoolbox` o CPU) y concurrencia. |
 | `videos/publicaciones/[CANAL]/` | **Entrega Final:** Paquetes fechados con video aprobado, miniatura viral y `copy_publicacion.txt`. |
 
 ---
@@ -60,10 +60,10 @@ Para conectar plataformas (YouTube Shorts, TikTok, Instagram) sin exigir al usua
 1. **El Orquestador habla de forma humana y directa:**
    > *"Te abro una ventana en tu pantalla. Inicias sesión en tu cuenta como siempre, el sistema detecta que entraste, guarda la sesión y cierra la ventana sola."*
 2. **Lanzador Interactivo Universal:**
-   - **En Windows:** Utiliza `schtasks /create ... /it /f` seguido de `schtasks /run` a través de [`scripts/run_connect.bat`](file:///c:/ganar%20dinero/scripts/run_connect.bat). La bandera `/it` permite a Windows romper el aislamiento de fondo y mostrar la ventana en el monitor físico del usuario.
+   - **En Windows:** Utiliza `schtasks /create ... /it /f` seguido de `schtasks /run` a través de [`scripts/run_connect.bat`](scripts/run_connect.bat). La bandera `/it` permite a Windows romper el aislamiento de fondo y mostrar la ventana en el monitor físico del usuario.
    - **En Linux / macOS:** Ejecuta directamente `python3 scripts/connect_account.py --channel [canal] --platform [plataforma]`.
 3. **Cierre y Aislamiento Automático:**
-   - [`scripts/connect_account.py`](file:///c:/ganar%20dinero/scripts/connect_account.py) abre Google Chrome con protecciones anti-bloqueo.
+   - [`scripts/connect_account.py`](scripts/connect_account.py) abre Google Chrome con protecciones anti-bloqueo.
    - Al detectar las cookies de sesión activa (`LOGIN_INFO`, `SSID`, `SID` o `sessionid`), guarda el estado en `config/sessions/[canal]/[plataforma]_session.json` y **cierra la ventana automáticamente**.
    - Cada canal opera en su propia carpeta aislada, evitando cruces entre marcas.
 
@@ -75,6 +75,9 @@ Para conectar plataformas (YouTube Shorts, TikTok, Instagram) sin exigir al usua
 # 1. Instalar dependencias y diagnosticar entorno
 python scripts/setup_environment.py
 
-# 2. Iniciar producción para el canal activo
-python scripts/produce_channel_video.py --channel imperio_secreto
+# 2. Configurar tu canal (interactivo en terminal o pidiéndoselo al agente)
+python scripts/onboarding.py
+
+# 3. Producir video (o modo demo automático si no hay canales registrados)
+python scripts/produce_channel_video.py
 ```

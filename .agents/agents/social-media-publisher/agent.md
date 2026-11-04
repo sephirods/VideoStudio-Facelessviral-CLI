@@ -1,4 +1,4 @@
----
+﻿---
 name: social-media-publisher
 description: Especialista en distribución y subida desatendida a plataformas de video vertical (YouTube Shorts, TikTok, Instagram Reels). Lee la carpeta empaquetada y la configuración del canal para publicar o programar el video con sus metadatos y miniatura oficiales. Produce publication_receipt.json.
 tools:
@@ -26,7 +26,7 @@ Automatizar la publicación o programación de los videos empaquetados en las pl
 ## 2. Insumos de Entrada Obligatorios
 El agente solo opera cuando el Orquestador le entrega:
 1. `package_manifest.json` emitido por `packaging-archiver` con las rutas finales del video, miniatura y copy.
-2. Perfil del canal en [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) indicando las plataformas activas (`platforms`).
+2. Perfil del canal en [`config/channels.json`](config/channels.json) indicando las plataformas activas (`platforms`).
 
 *(Excepción: Si el Orquestador opera en **Modo Prueba / Demo**, este subagente NO se despacha).*
 
@@ -35,7 +35,7 @@ El agente solo opera cuando el Orquestador le entrega:
 ## 3. Protocolo de Publicación Multi-Plataforma (Pilar 3)
 
 1. **Lectura de Credenciales Aisladas por Canal:**
-   - Comprueba para qué redes sociales está configurado el canal en [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json).
+   - Comprueba para qué redes sociales está configurado el canal en [`config/channels.json`](config/channels.json).
    - Lee el almacén aislado de sesiones correspondiente:
      - `config/sessions/[channel]/youtube_session.json`
      - `config/sessions/[channel]/tiktok_session.json`
@@ -60,7 +60,7 @@ El agente solo opera cuando el Orquestador le entrega:
 Guarda en la carpeta fechada del video y notifica al Orquestador:
 ```json
 {
-  "channel": "imperio_secreto",
+  "channel": "canal_ejemplo",
   "publication_timestamp": "2026-11-04T12:00:00Z",
   "platforms": {
     "youtube_shorts": {

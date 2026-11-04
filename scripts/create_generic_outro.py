@@ -14,6 +14,8 @@ import subprocess
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 
 def get_font(size: int, bold: bool = True):
     font_paths = [
@@ -215,7 +217,7 @@ def create_outro_video(
 
 def main():
     parser = argparse.ArgumentParser(description="Create generic short video outro.")
-    parser.add_argument("--output", default=r"c:\ganar dinero\assets\outro_generico.mp4", help="Output MP4 path")
+    parser.add_argument("--output", default=os.path.join(ROOT_DIR, "assets", "outro_generico.mp4"), help="Output MP4 path")
     parser.add_argument("--voice", default="es-MX-JorgeNeural", help="Edge-TTS voice name")
     parser.add_argument("--text", default="¿Quieres saber más? ¡Síguenos y no te pierdas el próximo dato!", help="Spoken CTA")
     args = parser.parse_args()

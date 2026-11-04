@@ -6,17 +6,20 @@ creates required directory structure and verifies subagent definitions.
 Ready for one-click setup after cloning from GitHub.
 """
 
-import subprocess
-import sys
+import json
 import os
 import shutil
+import subprocess
+import sys
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 
 def print_header(title):
     print("\n" + "=" * 65)
     print(f"  {title}")
     print("=" * 65)
+
 
 def step_check_python():
     print_header("1. Verificando Entorno de Python")
@@ -26,6 +29,7 @@ def step_check_python():
         print("ERROR: Se requiere Python 3.10 o superior.", file=sys.stderr)
         sys.exit(1)
     print("Python OK.")
+
 
 def step_install_dependencies():
     print_header("2. Instalando Dependencias de Python (requirements.txt)")
@@ -39,6 +43,7 @@ def step_install_dependencies():
     except subprocess.CalledProcessError as e:
         print(f"Aviso al instalar dependencias: {e}", file=sys.stderr)
 
+
 def step_check_ffmpeg():
     print_header("3. Verificando FFmpeg")
     ffmpeg_bin = shutil.which("ffmpeg")
@@ -48,11 +53,12 @@ def step_check_ffmpeg():
         print("ADVERTENCIA: FFmpeg no se encontro en el PATH del sistema.", file=sys.stderr)
         print("Instalalo antes de renderizar videos (https://ffmpeg.org/download.html)", file=sys.stderr)
 
+
 def step_check_engine():
     print_header("4. Verificando Motor de Video (MoneyPrinterTurbo)")
     engine_paths = [
-        r"C:\MoneyPrinterTurbo",
-        os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo")
+        os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo"),
+        r"C:\MoneyPrinterTurbo" if sys.platform.startswith("win") else "/opt/MoneyPrinterTurbo"
     ]
     found_path = next((p for p in engine_paths if os.path.exists(p)), None)
     if found_path:
@@ -71,8 +77,9 @@ def step_check_engine():
         print("Motor de video instalado y configurado.")
         return target_dir
     except Exception as e:
-        print(f"Aviso al descargar motor: {e}. Puedes clonarlo en C:\\MoneyPrinterTurbo manualmente.")
+        print(f"Aviso al descargar motor: {e}. Puedes clonarlo en engine/MoneyPrinterTurbo manualmente.")
         return None
+
 
 def step_detect_hardware():
     print_header("5. Auditando Aceleracion de Hardware de Video")
@@ -81,6 +88,7 @@ def step_detect_hardware():
         subprocess.call([sys.executable, detect_script])
     else:
         print("Aviso: detect_hardware.py no encontrado.")
+
 
 def step_ensure_directories():
     print_header("6. Inicializando Estructura de Carpetas")
@@ -103,8 +111,9 @@ def step_ensure_directories():
             f.write('{\n  "active_default_channel": null,\n  "channels": {}\n}\n')
         print("config/channels.json inicializado.")
 
+
 def step_verify_subagents():
-    print_header("6. Verificando Definicion de Subagentes")
+    print_header("7. Verificando Definicion de Subagentes")
     agents_dir = os.path.join(ROOT_DIR, ".agents", "agents")
     expected = [
         "trend-researcher",
@@ -127,6 +136,7 @@ def step_verify_subagents():
             print(f"  [FALTA] {ag} -> {agent_file}")
     print(f"\nSubagentes operativos: {found}/{len(expected)}")
 
+
 def main():
     print_header("FACTORIA DE VIDEO - INSTALADOR Y SETUP MAESTRO")
     step_check_python()
@@ -138,6 +148,23 @@ def main():
     step_verify_subagents()
     print_header("INSTALACION COMPLETADA EXITOSAMENTE")
     print("Todo listo. El Orquestador puede operar la factoria de video.")
+
+    channels_path = os.path.join(ROOT_DIR, "config", "channels.json")
+    has_channels = False
+    if os.path.exists(channels_path):
+        try:
+            with open(channels_path, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+                has_channels = bool(cdata.get("channels"))
+        except Exception:
+            pass
+
+    if not has_channels:
+        print("\n[AVISO] No hay canales configurados todavía en config/channels.json.")
+        print("  1) Pídele a tu IA en el chat: 'Quiero configurar mi canal' para iniciar la entrevista.")
+        print("  2) O corre el asistente interactivo en terminal: python scripts/onboarding.py")
+        print("  3) O genera un video de prueba local: python scripts/produce_channel_video.py --demo")
+
 
 if __name__ == "__main__":
     main()

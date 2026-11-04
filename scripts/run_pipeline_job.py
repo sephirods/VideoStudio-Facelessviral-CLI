@@ -20,19 +20,22 @@ import uuid
 # Ensure MoneyPrinterTurbo is on the import path dynamically
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ENGINE_CANDIDATES = [
-    r"C:\MoneyPrinterTurbo",
-    os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo")
+    os.path.join(ROOT_DIR, "engine", "MoneyPrinterTurbo"),
+    r"C:\MoneyPrinterTurbo" if sys.platform.startswith("win") else "/opt/MoneyPrinterTurbo"
 ]
-ENGINE_DIR = next((p for p in ENGINE_CANDIDATES if os.path.exists(p)), r"C:\MoneyPrinterTurbo")
+ENGINE_DIR = next((p for p in ENGINE_CANDIDATES if os.path.exists(p)), ENGINE_CANDIDATES[0])
 if ENGINE_DIR not in sys.path:
     sys.path.insert(0, ENGINE_DIR)
 
-os.chdir(ENGINE_DIR)
-import cli
+if os.path.exists(ENGINE_DIR):
+    os.chdir(ENGINE_DIR)
+    import cli
+else:
+    cli = None
 
 
 def get_hardware_encoder():
-    hw_file = r"c:\ganar dinero\config\hardware.json"
+    hw_file = os.path.join(ROOT_DIR, "config", "hardware.json")
     if os.path.exists(hw_file):
         try:
             with open(hw_file, "r", encoding="utf-8") as f:
@@ -68,12 +71,17 @@ def append_outro(main_video: str, outro_video: str, output_path: str):
 
 
 def main():
+    if cli is None:
+        print(f"ERROR: Motor de video no encontrado en {ENGINE_DIR}.", file=sys.stderr)
+        print("Ejecuta 'python scripts/setup_environment.py' para instalarlo automáticamente.", file=sys.stderr)
+        return 1
+
     parser = argparse.ArgumentParser(description="Run MoneyPrinterTurbo pipeline with native UTF-8.")
     parser.add_argument("--mode", choices=["materials", "render"], required=True)
     parser.add_argument("--script-json", required=True, help="Path to video_script.json")
     parser.add_argument("--materials-json", default=None, help="Path to approved_materials.json (for render mode)")
     parser.add_argument("--task-id", default=None, help="Task UUID")
-    parser.add_argument("--output-video", default=None, help="Destination MP4 path (e.g. c:\\ganar dinero\\videos\\slug.mp4)")
+    parser.add_argument("--output-video", default=None, help="Destination MP4 path (e.g. videos/slug.mp4)")
     parser.add_argument("--no-outro", action="store_true", help="Disable automatic outro appending")
     args = parser.parse_args()
 
@@ -133,7 +141,7 @@ def main():
             print(f"Warning: Expected final video not found at {raw_final}")
             return ret
 
-        outro_path = r"c:\ganar dinero\assets\outro_generico.mp4"
+        outro_path = os.path.join(ROOT_DIR, "assets", "outro_generico.mp4")
         dest_path = args.output_video or raw_final
 
         if not args.no_outro and os.path.exists(outro_path):

@@ -106,7 +106,8 @@ def detect_encoder():
 
 def main():
     config = detect_encoder()
-    out_dir = r"c:\ganar dinero\config"
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    out_dir = os.path.join(root_dir, "config")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "hardware.json")
     with open(out_path, "w", encoding="utf-8") as f:

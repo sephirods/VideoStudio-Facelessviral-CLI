@@ -5,7 +5,7 @@ Fetches:
 1. Google Trends Realtime & Daily RSS (ES, MX, US).
 2. Viral Reddit RSS feeds (r/todayilearned, r/business, r/technology, r/Economics).
 3. Classifies topics by the 4 Monetization Pillars.
-Outputs: c:\\ganar dinero\\pipeline_runs\\current_market_trends.json
+Outputs: pipeline_runs/current_market_trends.json
 """
 import urllib.request
 import json
@@ -93,7 +93,8 @@ def main():
         }
     }
 
-    out_dir = r"c:\ganar dinero\pipeline_runs"
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    out_dir = os.path.join(root_dir, "pipeline_runs")
     os.makedirs(out_dir, exist_ok=True)
     out_file = os.path.join(out_dir, "current_market_trends.json")
 

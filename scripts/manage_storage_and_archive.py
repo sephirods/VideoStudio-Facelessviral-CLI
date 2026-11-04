@@ -13,7 +13,7 @@ import json
 import glob
 from datetime import datetime
 
-WORKSPACE = r"c:\ganar dinero"
+WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VIDEOS_DIR = os.path.join(WORKSPACE, "videos")
 PUBLICACIONES_DIR = os.path.join(VIDEOS_DIR, "publicaciones")
 BROLL_DIR = os.path.join(WORKSPACE, "assets", "b-roll")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Animate Canva Outro Card with Edge-TTS voiceover.
-Produces c:\ganar dinero\assets\outro_generico.mp4 (1080x1920, 30fps).
+Produces assets/outro_generico.mp4 (1080x1920, 30fps).
 """
 import os
 import subprocess
@@ -9,10 +9,11 @@ import shutil
 import math
 from PIL import Image, ImageEnhance
 
-CANVA_PNG = r"c:\ganar dinero\assets\canva_outro_card.png"
-OUTPUT_MP4 = r"c:\ganar dinero\assets\outro_generico.mp4"
-TEMP_DIR = r"c:\ganar dinero\assets\temp_outro_frames"
-AUDIO_PATH = r"c:\ganar dinero\assets\temp_outro_audio.mp3"
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CANVA_PNG = os.path.join(ROOT_DIR, "assets", "canva_outro_card.png")
+OUTPUT_MP4 = os.path.join(ROOT_DIR, "assets", "outro_generico.mp4")
+TEMP_DIR = os.path.join(ROOT_DIR, "assets", "temp_outro_frames")
+AUDIO_PATH = os.path.join(ROOT_DIR, "assets", "temp_outro_audio.mp3")
 
 def main():
     os.makedirs(TEMP_DIR, exist_ok=True)

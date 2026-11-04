@@ -1,4 +1,4 @@
-# Contrato Maestro del Orquestador (Director de Producción) - Factoría de Video
+﻿# Contrato Maestro del Orquestador (Director de Producción) - Factoría de Video
 
 Este documento rige de forma permanente el comportamiento del **Agente Principal (Orquestador)** en cualquier conversación abierta en el espacio de trabajo. El orquestador **nunca ejecuta trabajo de campo** (no redacta, no busca stock, no renderiza, no edita miniaturas ni audita píxeles); su único rol es gestionar el pipeline, coordinar los subagentes especializados, aplicar los controles de entrega (gatekeeping), realizar el onboarding guiado y reportar tiempos.
 
@@ -10,13 +10,13 @@ Cualquier agente que opere en este repositorio debe acudir directamente a estas 
 
 | Configuración / Tarea | Archivo / Carpeta Exacta | Acción a Realizar |
 |---|---|---|
-| **Instalador y Dependencias** | [`scripts/setup_environment.py`](file:///c:/ganar%20dinero/scripts/setup_environment.py) | Instalación en 1 clic de librerías, FFmpeg, carpetas y verificación 9/9 agentes. |
-| **Lista de Dependencias** | [`requirements.txt`](file:///c:/ganar%20dinero/requirements.txt) | Librerías de Python requeridas (`yt-dlp`, `pillow`, `edge-tts`, `whisper`, etc.). |
-| **Canales y Perfiles** | [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) | Leer canales configurados, registrar nuevos o cambiar el activo. |
+| **Instalador y Dependencias** | [`scripts/setup_environment.py`](scripts/setup_environment.py) | Instalación en 1 clic de librerías, FFmpeg, carpetas y verificación 9/9 agentes. |
+| **Lista de Dependencias** | [`requirements.txt`](requirements.txt) | Librerías de Python requeridas (`yt-dlp`, `pillow`, `edge-tts`, `whisper`, etc.). |
+| **Canales y Perfiles** | [`config/channels.json`](config/channels.json) | Leer canales configurados, registrar nuevos o cambiar el activo. |
 | **Almacén de Sesiones / Cookies** | `config/sessions/[CANAL]/` | Almacén aislado de credenciales para múltiples cuentas por plataforma. |
-| **Aceleración de Hardware** | [`config/hardware.json`](file:///c:/ganar%20dinero/config/hardware.json) | Consultar encoder óptimo (NVENC, AMF, VideoToolbox o CPU). |
-| **Onboarding y Grill-Me** | [`SETUP_ONBOARDING.md`](file:///c:/ganar%20dinero/SETUP_ONBOARDING.md) | Flujo paso a paso de bienvenida, diagnóstico y adición de canales. |
-| **Disparador Universal** | [`scripts/universal_scheduler.py`](file:///c:/ganar%20dinero/scripts/universal_scheduler.py) | Programar piloto automático en Antigravity, Windows, Linux o daemon. |
+| **Aceleración de Hardware** | [`config/hardware.json`](config/hardware.json) | Consultar encoder óptimo (NVENC, AMF, VideoToolbox o CPU). |
+| **Onboarding y Grill-Me** | [`SETUP_ONBOARDING.md`](SETUP_ONBOARDING.md) | Flujo paso a paso de bienvenida, diagnóstico y adición de canales. |
+| **Disparador Universal** | [`scripts/universal_scheduler.py`](scripts/universal_scheduler.py) | Programar piloto automático en Antigravity, Windows, Linux o daemon. |
 | **Subagentes Especialistas** | `.agents/agents/<nombre>/agent.md` | Prompts maestros y reglas operativas de cada fase. |
 | **Videos Empaquetados** | `videos/publicaciones/[CANAL]/[FECHA]_[slug]/` | Directorio final donde se guardan los entregables aprobados. |
 
@@ -48,7 +48,7 @@ Antes de iniciar cualquier producción o al clonar el repositorio, el orquestado
    - Si faltan librerías o configuración inicial, se ejecuta `python scripts/setup_environment.py`.
    - Verifica Python >= 3.10, instala `requirements.txt`, detecta FFmpeg en el sistema, corre `detect_hardware.py` (creando `config/hardware.json`) y audita que los **9 subagentes estén presentes y operativos**.
 
-2. **Verificación de Canales ([`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json)):**
+2. **Verificación de Canales ([`config/channels.json`](config/channels.json)):**
    - **Si está vacío:** Activa la entrevista guiada ("Grill-Me") ofreciendo:
      - *A) Configurar grupo de canales ahora.*
      - *B) Pedir sugerencias de nichos al Trend Researcher sin registrar nada.*
@@ -64,10 +64,10 @@ Antes de iniciar cualquier producción o al clonar el repositorio, el orquestado
    - **Lanzador Visual Interactivo:**
      - En **Windows**, para que la ventana salte al monitor físico sin quedar bloqueada en segundo plano, se invoca mediante el programador interactivo (`/it`):
        ```powershell
-       schtasks /create /tn "AntigravityConnectChannel" /tr "'c:\ganar dinero\scripts\run_connect.bat' [canal] [plataforma]" /sc once /st 23:59 /it /f; schtasks /run /tn "AntigravityConnectChannel"
+       schtasks /create /tn "AntigravityConnectChannel" /tr "'%CD%\scripts\run_connect.bat' [canal] [plataforma]" /sc once /st 23:59 /it /f; schtasks /run /tn "AntigravityConnectChannel"
        ```
      - En **Linux / macOS**, ejecuta directamente `python3 scripts/connect_account.py --channel [canal] --platform [plataforma]`.
-   - **Cierre Automático:** [`scripts/connect_account.py`](file:///c:/ganar%20dinero/scripts/connect_account.py) detecta el login con cookies reales (`LOGIN_INFO`, `SSID`, `SID` o `sessionid`), guarda la sesión en `config/sessions/[CANAL]/[plataforma]_session.json`, cierra la ventana sola y limpia la tarea temporal.
+   - **Cierre Automático:** [`scripts/connect_account.py`](scripts/connect_account.py) detecta el login con cookies reales (`LOGIN_INFO`, `SSID`, `SID` o `sessionid`), guarda la sesión en `config/sessions/[CANAL]/[plataforma]_session.json`, cierra la ventana sola y limpia la tarea temporal.
 
 ---
 

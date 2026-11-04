@@ -10,10 +10,10 @@ Cualquier agente u orquestador que clone este repositorio encuentra todo en esta
 
 | Elemento / Tarea | Archivo / Carpeta Exacta | Qué se hace aquí |
 |---|---|---|
-| **Registro de Canales** | [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) | Añadir, editar o cambiar el canal activo y sus nichos. |
-| **Configuración de Hardware** | [`config/hardware.json`](file:///c:/ganar%20dinero/config/hardware.json) | GPU detectada (NVENC, AMF, VideoToolbox) o CPU. |
-| **Protocolo de Onboarding** | [`SETUP_ONBOARDING.md`](file:///c:/ganar%20dinero/SETUP_ONBOARDING.md) | Flujo paso a paso de la entrevista "Grill-Me" y doctor. |
-| **Contrato del Orquestador** | [`AGENTS.md`](file:///c:/ganar%20dinero/AGENTS.md) | Reglas de despacho, gatekeeping y paralelismo. |
+| **Registro de Canales** | [`config/channels.json`](config/channels.json) | Añadir, editar o cambiar el canal activo y sus nichos. |
+| **Configuración de Hardware** | [`config/hardware.json`](config/hardware.json) | GPU detectada (NVENC, AMF, VideoToolbox) o CPU. |
+| **Protocolo de Onboarding** | [`SETUP_ONBOARDING.md`](SETUP_ONBOARDING.md) | Flujo paso a paso de la entrevista "Grill-Me" y doctor. |
+| **Contrato del Orquestador** | [`AGENTS.md`](AGENTS.md) | Reglas de despacho, gatekeeping y paralelismo. |
 | **Reglas de Subagentes** | `.agents/agents/<nombre>/agent.md` | Prompts y herramientas de cada especialista. |
 | **Entregables Finales** | `videos/publicaciones/[CANAL]/[FECHA]_[slug]/` | Paquetes listos para subir a redes o consumo. |
 
@@ -28,7 +28,7 @@ Antes de operar, el sistema audita el entorno para optimizar el rendimiento sin 
    - **AMD GPU:** Detecta AMF (`h264_amf`).
    - **Apple Silicon:** Detecta VideoToolbox (`h264_videotoolbox`).
    - **CPU Fallback:** Selecciona codificación multihilo CPU (`libx264`, preset `fast`).
-   - *Persistencia:* Guarda el resultado en [`config/hardware.json`](file:///c:/ganar%20dinero/config/hardware.json).
+   - *Persistencia:* Guarda el resultado en [`config/hardware.json`](config/hardware.json).
 
 2. **Verificación de Dependencias Esenciales:**
    - Python 3.10+ (entorno virtual activo).
@@ -40,7 +40,7 @@ Antes de operar, el sistema audita el entorno para optimizar el rendimiento sin 
 
 ## 2. Entrevista de Configuración Inicial ("Grill-Me" de Canales)
 
-Cuando el Orquestador detecta que [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) está vacío, o cuando el usuario escribe `configurar canal`, se ejecuta el siguiente flujo interactivo:
+Cuando el Orquestador detecta que [`config/channels.json`](config/channels.json) está vacío, o cuando el usuario escribe `configurar canal`, se ejecuta el siguiente flujo interactivo:
 
 ### Paso 1: Selección de Modo Inicial
 - **A) Configurar mi primer Grupo de Canales ahora.**
@@ -98,7 +98,7 @@ Cuando el usuario selecciona las plataformas donde desea publicar automáticamen
 - **En Windows (Aislamiento de Fondo Solucionado con `/it`):**
   Para que la ventana salte al monitor físico interactivo del usuario y no quede atrapada en subprocesos invisibles, el sistema utiliza el Programador de Tareas con la bandera interactiva `/it`:
   ```powershell
-  schtasks /create /tn "AntigravityConnectChannel" /tr "'c:\ganar dinero\scripts\run_connect.bat' [canal] [plataforma]" /sc once /st 23:59 /it /f; schtasks /run /tn "AntigravityConnectChannel"
+  schtasks /create /tn "AntigravityConnectChannel" /tr "'%CD%\scripts\run_connect.bat' [canal] [plataforma]" /sc once /st 23:59 /it /f; schtasks /run /tn "AntigravityConnectChannel"
   ```
 - **En Linux / macOS:**
   Ejecuta directamente:
@@ -124,7 +124,7 @@ Cuando el usuario selecciona las plataformas donde desea publicar automáticamen
 
 #### 4. Aislamiento Estricto para Múltiples Canales:
 - Cada canal tiene su propia carpeta:
-  - Canal 1 (Finanzas): `config/sessions/imperio_secreto/youtube_session.json`
+  - Canal 1 (Finanzas): `config/sessions/canal_finanzas/youtube_session.json`
   - Canal 2 (Misterio): `config/sessions/misterios_mundo/youtube_session.json`
   - Canal 3 (Humor): `config/sessions/risas_top/tiktok_session.json`
 - El publicador lee **únicamente** la carpeta del canal activo. Imposible mezclar publicaciones o credenciales entre marcas.
@@ -179,7 +179,7 @@ El Grill-Me no es un evento de una sola vez. Cada vez que el usuario decida expa
 - *"Añadir nuevo canal"*
 - O use una orden similar
 
-El Orquestador vuelve a ejecutar la entrevista (Pasos 2 al 5) para el nuevo canal y lo añade en [`config/channels.json`](file:///c:/ganar%20dinero/config/channels.json) bajo una nueva clave:
+El Orquestador vuelve a ejecutar la entrevista (Pasos 2 al 5) para el nuevo canal y lo añade en [`config/channels.json`](config/channels.json) bajo una nueva clave:
 
 ```json
 {
@@ -226,5 +226,5 @@ Para que un creador pueda operar **múltiples canales de YouTube, TikTok o Insta
    - El sistema ejecuta todo el pipeline técnico en carpeta local sin exigir registro de canal ni publicar en redes.
 
 3. **Modo Sugerencia a Pedido:**
-   - El usuario pide: *"Sugiéreme nichos para ganar dinero"* o *"Sugiéreme nichos de entretenimiento"*.
+   - El usuario pide: *"Sugiéreme nichos para monetizar"* o *"Sugiéreme nichos de entretenimiento"*.
    - Se despacha a `trend-researcher` para analizar el mercado y devolver las 3 mejores propuestas sin tocar `channels.json` hasta que el usuario elija una.

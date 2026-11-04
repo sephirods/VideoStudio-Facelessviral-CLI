@@ -73,11 +73,11 @@ El agente solo opera cuando el Orquestador le confirma que existen:
 Guarda en la carpeta fechada y reporta al Orquestador:
 ```json
 {
-  "channel": "imperio_secreto",
-  "publication_folder": "videos/publicaciones/imperio_secreto/2026-11-04_truco_bancario/",
-  "video_path": "videos/publicaciones/imperio_secreto/2026-11-04_truco_bancario/video_final.mp4",
-  "thumbnail_path": "videos/publicaciones/imperio_secreto/2026-11-04_truco_bancario/miniatura_viral.jpg",
-  "copy_path": "videos/publicaciones/imperio_secreto/2026-11-04_truco_bancario/copy_publicacion.txt",
+  "channel": "canal_ejemplo",
+  "publication_folder": "videos/publicaciones/canal_ejemplo/2026-11-04_truco_bancario/",
+  "video_path": "videos/publicaciones/canal_ejemplo/2026-11-04_truco_bancario/video_final.mp4",
+  "thumbnail_path": "videos/publicaciones/canal_ejemplo/2026-11-04_truco_bancario/miniatura_viral.jpg",
+  "copy_path": "videos/publicaciones/canal_ejemplo/2026-11-04_truco_bancario/copy_publicacion.txt",
   "status": "ready_for_distribution"
 }
 ```

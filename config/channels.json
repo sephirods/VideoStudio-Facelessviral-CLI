@@ -1,30 +1,4 @@
 {
-  "active_default_channel": "imperio_secreto",
-  "channels": {
-    "imperio_secreto": {
-      "name": "Imperio Secreto",
-      "niche": "Psicología Financiera, Secretos Corporativos y Hábitos de Dinero",
-      "purpose": "monetization",
-      "target_duration_seconds": [
-        62,
-        72
-      ],
-      "platforms": [
-        "youtube_shorts",
-        "tiktok",
-        "instagram_reels"
-      ],
-      "visual_assets": {
-        "outro_mode": "canva",
-        "canva_user": "Juan Andres Baez Lamar"
-      },
-      "style_notes": "Tono de intriga y autoridad financiera, cortes dinámicos cada 2.5s, subtítulos contrastados al 58% con cápsula negra, gancho de ruptura de creencias en los primeros 3 segundos.",
-      "schedule": {
-        "mode": "on_demand",
-        "time": "19:00",
-        "cadence": "DAILY",
-        "engine": "windows_task_scheduler"
-      }
-    }
-  }
+  "active_default_channel": null,
+  "channels": {}
 }

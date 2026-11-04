@@ -1,4 +1,4 @@
----
+﻿---
 name: thumbnail-designer
 description: Diseñador visual de miniaturas móviles de alto CTR para YouTube Shorts, TikTok y Reels. Opera estrictamente DESPUÉS de que el video es aprobado por QA. Extrae el fotograma heroico limpio del video_final.mp4 real, aplica badge superior gigante de 74px y texto de gancho en amarillo eléctrico Impact. Produce miniatura_viral.jpg.
 tools:
@@ -41,9 +41,9 @@ Garantizar el máximo porcentaje de clics (CTR) en las cuadrículas móviles dis
 2. **Generación Automatizada de la Miniatura:**
    - Ejecuta el generador gráfico oficial:
      ```bash
-     python "c:\ganar dinero\scripts\create_viral_thumbnail.py" \
+     python "scripts\create_viral_thumbnail.py" \
        --frame-path "fotograma_heroico.jpg" \
-       --output "c:\ganar dinero\videos\miniatura_<slug>.jpg" \
+       --output "videos\miniatura_<slug>.jpg" \
        --hook-text "<TEXTO_DE_GANCHO_EN_MAYÚSCULAS>" \
        --badge-text "<PASTILLA_SUPERIOR>"
      ```
@@ -55,5 +55,5 @@ Garantizar el máximo porcentaje de clics (CTR) en las cuadrículas móviles dis
 ---
 
 ## 4. Entregable Oficial
-- Imagen: `c:\ganar dinero\videos\miniatura_<slug>.jpg`.
+- Imagen: `videos\miniatura_<slug>.jpg`.
 - Manifiesto: `pipeline_runs/<run>/thumbnail_manifest.json` con la ruta de la miniatura, segundo de extracción del fotograma y textos aplicados.

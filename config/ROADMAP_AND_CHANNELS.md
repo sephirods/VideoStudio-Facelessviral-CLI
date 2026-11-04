@@ -1,4 +1,4 @@
-# Hoja de Ruta del Sistema y Arquitectura de Grupos de Canales
+﻿# Hoja de Ruta del Sistema y Arquitectura de Grupos de Canales
 
 Este documento registra de forma permanente los 3 desarrollos pendientes y el sistema de gestión multicanal (**Grupos de Canales**) para que cualquier sesión de Antigravity reconozca y opere la factoría automáticamente.
 
@@ -52,7 +52,7 @@ Un **Grupo de Canales** es una marca / perfil único con una **temática especí
 
 ### 2. Flujo de Configuración y Detección Automática (Onboarding)
 Cuando el Orquestador inicia una sesión (o se despierta por `/schedule`):
-1. **Verificación de Configuración:** Lee el archivo maestro [`c:\ganar dinero\config\channels.json`](file:///c:/ganar%20dinero/config/channels.json).
+1. **Verificación de Configuración:** Lee el archivo maestro [`config\channels.json`](config/channels.json).
 2. **Si NO hay canales configurados:**
    - El Orquestador detecta que es una configuración nueva y avisa al usuario.
    - Si el usuario **no sabe qué canal abrir**, el subagente `trend-researcher` analiza las tendencias de mayor RPM y menor competencia y le sugiere 2-3 opciones ganadoras de grupos de canales.
