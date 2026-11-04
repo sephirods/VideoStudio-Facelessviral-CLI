@@ -6,7 +6,50 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
 [![Multi-Agent](https://img.shields.io/badge/architecture-9%20Subagents-brightgreen.svg)]()
 
-Este repositorio contiene la arquitectura completa, portátil y lista para producción de una **Factoría de Video Automatizada para YouTube Shorts, TikTok e Instagram Reels**. Diseñada para operar en cualquier CLI moderna (Antigravity, Claude Code, Cursor, Windsurf, Aider) y en cualquier sistema operativo (Windows, macOS, Linux).
+Este repositorio contiene la arquitectura completa, portátil y lista para producción de una **Factoría de Video Automatizada para YouTube Shorts, TikTok e Instagram Reels**. Diseñada para operar en cualquier CLI moderna (Antigravity, Freebuff, Claude Code, Cursor, Windsurf, Aider) y en cualquier sistema operativo (Windows, macOS, Linux).
+
+---
+
+## ⚡ Arranque Rápido en 3 Pasos (Quickstart)
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/sephirods/VideoStudio-Facelessviral-CLI.git
+cd VideoStudio-Facelessviral-CLI
+
+# 2. Diagnóstico e instalación automática en 1 clic
+python scripts/setup_environment.py
+
+# 3. Producir video (o Modo Demo si aún no registras canales)
+python scripts/produce_channel_video.py
+```
+
+---
+
+## 🤖 Protocolo Universal para Agentes de IA (Freebuff, Claude Code, Cursor, Antigravity)
+
+> **Instrucción de Sistema para el Asistente:**
+> Si un usuario te proporciona el enlace a este repositorio (`https://github.com/sephirods/VideoStudio-Facelessviral-CLI`) o te pide operar en este espacio de trabajo:
+> 
+> 1. **Clonado Automático:** Si tu carpeta de trabajo actual está vacía o no contiene los scripts, clona el repositorio directamente:
+>    ```bash
+>    git clone https://github.com/sephirods/VideoStudio-Facelessviral-CLI.git .
+>    ```
+> 2. **Instalador de Entorno:** Ejecuta inmediatamente:
+>    ```bash
+>    python scripts/setup_environment.py
+>    ```
+> 3. **Rol del Orquestador:** Asume de inmediato el rol de **Director de Producción** regido por [`AGENTS.md`](AGENTS.md). 
+>    - Comunícate siempre en **español claro, breve, empático y 100% humano**.
+>    - **Cero tecnicismos, cero explicaciones robóticas de código** y cero justificaciones.
+>    - Nunca modifiques el flujo del usuario ni pidas Google Cloud Console o API keys manuales.
+> 4. **Paso 0 (Onboarding):** Revisa [`config/channels.json`](config/channels.json).
+>    - Si está vacío (`"channels": {}`), da la bienvenida al usuario y preséntale de forma conversacional las 4 opciones de inicio:
+>      - *A) Configurar mi primer Grupo de Canales ahora.*
+>      - *B) Sugerir temáticas y nichos de alto RPM (usando el subagente `trend-researcher`).*
+>      - *C) Generar un video piloto de prueba local (Modo Demo sin publicar).*
+>      - *D) Saltar por ahora.*
+>    - Si ya hay un canal configurado, repórtalo y pregunta qué tema producir hoy o si desea investigar tendencias.
 
 ---
 
@@ -66,18 +109,3 @@ Para conectar plataformas (YouTube Shorts, TikTok, Instagram) sin exigir al usua
    - [`scripts/connect_account.py`](scripts/connect_account.py) abre Google Chrome con protecciones anti-bloqueo.
    - Al detectar las cookies de sesión activa (`LOGIN_INFO`, `SSID`, `SID` o `sessionid`), guarda el estado en `config/sessions/[canal]/[plataforma]_session.json` y **cierra la ventana automáticamente**.
    - Cada canal opera en su propia carpeta aislada, evitando cruces entre marcas.
-
----
-
-## ⚡ Instalación y Arranque Rápido
-
-```bash
-# 1. Instalar dependencias y diagnosticar entorno
-python scripts/setup_environment.py
-
-# 2. Configurar tu canal (interactivo en terminal o pidiéndoselo al agente)
-python scripts/onboarding.py
-
-# 3. Producir video (o modo demo automático si no hay canales registrados)
-python scripts/produce_channel_video.py
-```
