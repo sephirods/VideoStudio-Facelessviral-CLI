@@ -47,18 +47,32 @@ def organize_run_into_publication(run_dir: str, category: str):
         with open(pkg_path, "r", encoding="utf-8") as f:
             pkg = json.load(f)
 
-        copy_text = f"""=== METADATOS DE PUBLICACIÓN ===
-TÍTULO:
+        raw_desc = pkg.get('description', '')
+        clean_desc = raw_desc.replace('\\n', '\n').strip()
+        if '\n\n#' in clean_desc:
+            clean_desc = clean_desc.split('\n\n#')[0].strip()
+
+        all_tags = pkg.get('tags', [])
+        if not all_tags:
+            all_tags = pkg.get('niche_tags', []) + pkg.get('universal_tags', [])
+
+        tags_str = ' '.join(all_tags)
+        copy_text = f"""============================================================
+TÍTULO PRINCIPAL:
 {pkg.get('primary_title', '')}
+============================================================
 
 DESCRIPCIÓN:
-{pkg.get('description', '')}
+{clean_desc}
 
-COMENTARIO FIJADO:
+============================================================
+COMENTARIO FIJADO (PINNED COMMENT):
 {pkg.get('pinned_comment', '')}
 
+============================================================
 HASHTAGS / ETIQUETAS:
-{', '.join(pkg.get('tags', []))}
+{tags_str}
+============================================================
 """
         with open(os.path.join(pub_dir, "copy_publicacion.txt"), "w", encoding="utf-8") as f:
             f.write(copy_text)

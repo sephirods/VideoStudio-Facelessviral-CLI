@@ -160,8 +160,14 @@ def publish_all(channel_id: str, video_path: str, metadata_path: str, thumbnail_
             with open(metadata_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
                 title = meta.get("primary_title", title)
-                description = meta.get("description", "")
+                raw_desc = meta.get("description", "")
+                clean_desc = raw_desc.replace('\\n', '\n').strip()
+                if '\n\n#' in clean_desc:
+                    clean_desc = clean_desc.split('\n\n#')[0].strip()
+                description = clean_desc
                 tags = meta.get("all_tags", [])
+                if not tags:
+                    tags = meta.get("niche_tags", []) + meta.get("universal_tags", [])
                 if not tags:
                     tags = meta.get("tags_layer_1_niche", []) + meta.get("tags_layer_2_universal", [])
                 pinned_comment = meta.get("pinned_comment", "")

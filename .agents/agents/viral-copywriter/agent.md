@@ -59,8 +59,10 @@ Con la evidencia de mercado en mano y el guión del video, el subagente razona y
 - **Objetivo:** Forzar una tasa alta de respuestas en los primeros 30 minutos (la métrica que catapulta el video en el feed de Shorts).
 - **Enfoque:** Redacta una pregunta abierta, un dilema moral o una contradicción provocadora derivada del guión en el idioma del canal.
 
-### D) Descripción Móvil Optimizada
+### D) Descripción Móvil Limpia (Sin Caracteres de Escape)
 - 2 a 3 líneas compactas que refuercen las palabras clave secundarias antes del botón "más", optimizadas para búsqueda sin saturar de texto inútil.
+- **PROHIBIDO escribir caracteres de escape literales como `\n` o `\n\n` en el texto**. Debe ser prosa corrida y natural.
+- **PROHIBIDO incrustar los hashtags dentro de `description`**: Los hashtags pertenecen exclusivamente a las listas `niche_tags` y `universal_tags`. De unirlos y darles formato con saltos de línea reales se encarga automáticamente `packaging-archiver` al generar `copy_publicacion.txt`.
 
 ---
 
@@ -72,7 +74,7 @@ Guarda en la carpeta de la ejecución:
   "language": "es",
   "primary_title": "La regla del 1% que los bancos te ocultan #Shorts",
   "title_character_count": 52,
-  "description": "Ahorrar dinero tradicionalmente te hace más pobre por la inflación. Conoce la regla del 1% que aplican los grandes inversores.\n\n#Shorts #finanzas #ahorro #inversiones #dinero",
+  "description": "Ahorrar dinero tradicionalmente te hace más pobre por la inflación. Conoce la regla del 1% que aplican los grandes inversores para multiplicar su capital sin depender del sistema bancario tradicional.",
   "niche_tags": [
     "#finanzaspersonales",
     "#educacionfinanciera",
