@@ -85,6 +85,8 @@ def main():
         "--video-script", full_script,
         "--video-aspect", "9:16",
         "--video-clip-duration", "4",
+        "--bgm-type", "random",
+        "--bgm-volume", "0.2",
         "--subtitle-enabled",
         "--subtitle-background-enabled",
         "--subtitle-background-color", "#000000",

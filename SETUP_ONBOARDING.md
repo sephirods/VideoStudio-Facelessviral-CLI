@@ -138,8 +138,19 @@ Cuando el usuario selecciona las plataformas donde desea publicar automáticamen
 
 ---
 
-### Paso 7: Cadencia de Operación y Disparador Universal (Multi-CLI)
-- **¿Deseas que la factoría cree y publique videos en piloto automático programado o prefieres producirlos a pedido?**
+### Paso 7: Gestión de Almacenamiento y Material Visual de Stock
+El Orquestador consulta al creador cómo prefiere administrar los clips de video descargados:
+> **🎬 Pregunta Grill-Me:**
+> ¿Cómo prefieres que gestionemos el material visual que descargamos para tus videos?
+> - **A) Crear Biblioteca Local de Calidad (Recomendado):** Guardamos los mejores clips en `videos/biblioteca_stock/` para reutilizarlos en futuros videos. Ahorra tiempo de descarga, consume menos internet y agiliza el renderizado.
+> - **B) Modo Ahorro de Espacio en Disco:** Borramos los clips temporales de stock inmediatamente después de aprobar el video final. Mantiene tu disco limpio y descarga material 100% nuevo en cada producción.
+
+---
+
+### Paso 8: Cadencia de Operación y Disparador Universal (Multi-CLI)
+- **El usuario decide el ritmo**, pero el Orquestador le presenta la **recomendación algorítmica**:
+  > *💡 Recomendación de crecimiento:* Para ganar tracción en YouTube Shorts y TikTok sin saturar al algoritmo ni arriesgar shadowban, lo óptimo es **1 a 2 videos diarios**, preferentemente en horas pico (13:00 y 19:00 hora local).
+- **Modalidades a elegir:**
   - **A Pedido (Bajo Demanda):** El sistema solo genera videos cuando tú des la orden explícita en tu terminal (`crear video para canal X`).
   - **Piloto Automático (Programado):** 
     - Define la hora y frecuencia (ej. *"Todos los días a las 19:00"* o *"Lunes, Miércoles y Viernes"*).
@@ -151,7 +162,17 @@ Cuando el usuario selecciona las plataformas donde desea publicar automáticamen
 
 ---
 
-## 3. Flujo para Crear Nuevos Canales (Reutilización del Grill-Me)
+## 3. Protocolo de Verificación en Turno 1 (Antes de Producir)
+
+Antes de iniciar la redacción o renderizado de cualquier video para un canal con cuentas vinculadas, el Orquestador ejecuta una **comprobación preventiva de 1 segundo**:
+1. Comprueba si existen los archivos en `config/sessions/[canal]/`.
+2. Si una sesión venció o no existe, **avisa al usuario de inmediato en el Turno 1**:
+   > *"Aviso rápido: la sesión de YouTube para este canal necesita renovarse. ¿Te abro la ventana 1 minuto para refrescarla o prefieres generar el video en modo local?"*
+3. Esto evita gastar minutos de CPU/GPU generando un video para luego descubrir al final que la subida fue rechazada por sesión caducada.
+
+---
+
+## 4. Flujo para Crear Nuevos Canales (Reutilización del Grill-Me)
 
 El Grill-Me no es un evento de una sola vez. Cada vez que el usuario decida expandir su red y diga:
 - *"Quiero abrir otro canal"*

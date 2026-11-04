@@ -102,6 +102,9 @@ flowchart TD
 ---
 
 ## 4. Reglas Innegociables de Calidad (Gatekeeping Estricto)
+- **Verificación Preventiva en Turno 1:** Si el canal tiene plataformas configuradas en `channels.json`, el orquestador audita `config/sessions/[canal]/` antes de arrancar la producción. Si falta una sesión o expiró, avisa de inmediato al usuario en el Turno 1 para renovarla o cambiar a modo local.
+- **Rotación y Variación de Stock:** `visual-asset-reviewer` registra los identificadores en `config/stock_history.json` para garantizar que no se repitan los mismos clips en un plazo de 7 días. Respeta la elección del creador sobre mantener biblioteca local o purgar caché.
+- **Música de Fondo Dinámica y Segura:** `video-renderer` ejecuta `--bgm-type random` a volumen `0.2` (-20 dB) para alternar entre más de 20 pistas libres de copyright sin saturar la voz principal.
 - El orquestador **NUNCA** avanza a una fase sin verificar que el entregable previo exista y sea válido en disco.
 - **Regla de la Miniatura:** `thumbnail-designer` **SOLO** se despacha una vez que `video-qa-validator` emite `qa_certificate.json` con resultado **`PASS`**. La miniatura se extrae **exclusivamente del video real aprobado**.
 - Si `video-qa-validator` emite `FAIL`, el orquestador frena el avance y devuelve la tarea a `video-renderer` con el segundo exacto a corregir.
