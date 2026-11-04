@@ -1,7 +1,12 @@
-# 🚀 Factoría Autónoma de Video Vertical Multi-Canal
+# 🚀 VideoStudio-Facelessviral-CLI
 ### Motor Maestro de Producción Desatendida con 9 Subagentes Especializados y 3 Pilares
 
-Este repositorio contiene la arquitectura completa, portátil y lista para producción de una **Factoría de Video Automatizada**. Diseñada para operar en cualquier CLI moderna (Antigravity, Claude Code, Cursor, Windsurf, Aider) y en cualquier sistema operativo (Windows, macOS, Linux).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Multi-Agent](https://img.shields.io/badge/architecture-9%20Subagents-brightgreen.svg)]()
+
+Este repositorio contiene la arquitectura completa, portátil y lista para producción de una **Factoría de Video Automatizada para YouTube Shorts, TikTok e Instagram Reels**. Diseñada para operar en cualquier CLI moderna (Antigravity, Claude Code, Cursor, Windsurf, Aider) y en cualquier sistema operativo (Windows, macOS, Linux).
 
 ---
 
