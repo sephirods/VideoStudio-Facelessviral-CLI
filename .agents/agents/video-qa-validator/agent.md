@@ -43,7 +43,7 @@ Extraer obligatoriamente fotogramas en al menos 5 marcas de tiempo clave:
 El auditor debe inspeccionar cada fotograma con la herramienta `read_file`. Emitirá **`FAIL` OBLIGATORIO** si detecta:
 1. **Fondos Planos / Vacíos:** Algún fotograma donde predomine un fondo plano monocromático (>80% blanco, negro o color sólido sin video real de fondo).
 2. **Modelos 3D Baratos:** Renders poligonales de arcilla/plastilina gris o wireframes estilizados.
-3. **Ausencia de Subtítulos:** Fotogramas en marcas de tiempo habladas (5s, 25s, 45s) que carezcan de subtítulos con cápsula negra.
+3. **Calidad y Dinamismo de Subtítulos:** Fotogramas en marcas de tiempo habladas (5s, 25s, 45s) deben presentar subtítulos dinámicos activos (máquina de escribir en gancho inicial o resaltado neón estilo Hormozi) con cápsula negra de contraste y anclados al 58%. Emitir FAIL si los subtítulos están estáticos o ausentes.
 4. **Desconexión Temática:** Aparición de elementos ajenos al nicho (ej. gatos o mar en videos de finanzas).
 5. **Colisión de Subtítulos:** Subtítulos por debajo del 50% o tapados por los márgenes de interfaz de TikTok/Shorts (deben estar al 58%).
 6. **Doble Despedida:** Si el texto del guión (`video_script.json` en Beat 5) incluye palabras de despedida o suscripción ("suscríbete", "síguenos", "dale like"), emite `FAIL` para corrección inmediata antes del render.

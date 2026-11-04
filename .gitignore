@@ -41,3 +41,4 @@ env/
 # Antigravity y cachés locales
 .gemini/
 .system_generated/
+scratch/
