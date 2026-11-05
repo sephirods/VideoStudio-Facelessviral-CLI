@@ -37,18 +37,38 @@ def step_install_dependencies():
     if not os.path.exists(req_file):
         print("Aviso: No se encontro requirements.txt, omitiendo pip install.")
         return
+
+    pip_cmd = [sys.executable, "-m", "pip"]
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file, "--quiet"])
-        print("Dependencias de Python instaladas correctamente.")
+        subprocess.check_call(pip_cmd + ["--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pip_bin = shutil.which("pip")
+        if pip_bin:
+            pip_cmd = [pip_bin]
+        else:
+            print("Aviso: pip no esta disponible directamente con este ejecutable de Python.", file=sys.stderr)
+            return
+
+    try:
+        subprocess.check_call(pip_cmd + ["install", "-r", req_file, "--quiet"])
+        print("Dependencias de Python verificadas e instaladas correctamente.")
     except subprocess.CalledProcessError as e:
         print(f"Aviso al instalar dependencias: {e}", file=sys.stderr)
 
 
 def step_check_ffmpeg():
-    print_header("3. Verificando FFmpeg")
+    print_header("3. Verificando FFmpeg y Filtro libass")
     ffmpeg_bin = shutil.which("ffmpeg")
     if ffmpeg_bin:
         print(f"FFmpeg encontrado en: {ffmpeg_bin}")
+        try:
+            res = subprocess.run([ffmpeg_bin, "-version"], capture_output=True, text=True)
+            if "--enable-libass" in res.stdout:
+                print("  [OK] Soporte libass detectado (subtitulos vectoriales dinamicos habilitados).")
+            else:
+                print("  [Aviso] FFmpeg no tiene --enable-libass; se recomienda instalar build completa de FFmpeg.")
+        except Exception:
+            pass
     else:
         print("ADVERTENCIA: FFmpeg no se encontro en el PATH del sistema.", file=sys.stderr)
         print("Instalalo antes de renderizar videos (https://ffmpeg.org/download.html)", file=sys.stderr)
