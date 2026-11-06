@@ -186,19 +186,105 @@ def append_outro(main_video: str, outro_video: str, output_path: str):
     )
 
 
-def _build_sequential_timeline(valid_clips: list[str], clip_durations: dict[str, float], target_duration: float, slot_sec: float = 4.0) -> list[dict]:
+def _build_sequential_timeline(
+    valid_clips: list[str],
+    clip_durations: dict[str, float],
+    target_duration: float,
+    slot_sec: float = 4.0,
+    beats_data: list[dict] | None = None,
+    hero_clip: str | None = None,
+    verified_hero: bool = False,
+) -> list[dict]:
     """
-    Builds a strictly sequential timeline covering `target_duration` seconds:
-    - Index 0 (e.g. hero_clip.mp4) is ALWAYS placed first at 0.0s - 4.0s (Hook).
-    - Subsequent clips follow exact order 1, 2, 3...
-    - If extra time is needed, cycles through support clips [1:] (preserving Hook uniqueness)
-      and advances start offset `ss` when the source clip is long enough.
+    Builds a strictly sequential, beat-synchronized timeline covering `target_duration` seconds:
+    - If beats_data is provided: aligns visuals strictly to each narration beat's duration.
+      Clips belonging to Beat N NEVER spill over into Beat N+1, preventing narration/visual desync.
+    - Intelligent Intra-Beat Reuse: If a beat needs more duration than available clips, it reuses
+      clips WITHIN the same beat using offset shifts (ss) + camera punch-in zoom (1.12x),
+      interleaving cuts so identical shots never repeat consecutively.
+    - Index 0 (hero_clip.mp4) is guaranteed first at 0.0s - 4.0s (Hook) when verified.
     """
     timeline: list[dict] = []
+
+    # 1. Beat-synchronized timeline when beats_data is present
+    if beats_data and isinstance(beats_data, list):
+        beat_words = [max(1, len(str(b.get("narration", "")).split())) for b in beats_data]
+        total_words = sum(beat_words) or 1
+
+        beat_durations = [round((w / total_words) * target_duration, 3) for w in beat_words]
+        delta = round(target_duration - sum(beat_durations), 3)
+        if beat_durations:
+            beat_durations[-1] = max(0.5, round(beat_durations[-1] + delta, 3))
+
+        clip_usage_global: dict[str, int] = {}
+
+        for b_idx, (b, b_target_dur) in enumerate(zip(beats_data, beat_durations)):
+            b_rem_dur = b_target_dur
+
+            # Special case for Beat 0 (Hook): hero clip placed first
+            if b_idx == 0 and verified_hero and hero_clip and os.path.exists(hero_clip):
+                h_dur = min(4.0, max(2.5, round(b_rem_dur * 0.5, 3)))
+                if b_rem_dur - h_dur < 1.5:
+                    h_dur = b_rem_dur
+                timeline.append({
+                    "index": len(timeline),
+                    "clip_path": os.path.abspath(hero_clip),
+                    "ss": 0.0,
+                    "duration": h_dur,
+                    "beat_idx": 0,
+                    "zoom_factor": 1.0,
+                })
+                clip_usage_global[os.path.abspath(hero_clip)] = clip_usage_global.get(os.path.abspath(hero_clip), 0) + 1
+                b_rem_dur = round(b_rem_dur - h_dur, 3)
+                if b_rem_dur <= 0.2:
+                    continue
+
+            # Clips belonging specifically to this beat
+            raw_b_clips = [os.path.abspath(c) for c in b.get("clips", []) if os.path.exists(c)]
+            if not raw_b_clips:
+                raw_b_clips = valid_clips
+
+            n_clips = len(raw_b_clips)
+            num_cuts = max(n_clips, max(1, round(b_rem_dur / 4.0)))
+            cut_duration = round(b_rem_dur / num_cuts, 3)
+
+            b_accum = 0.0
+            for cut_idx in range(num_cuts):
+                clip_path = raw_b_clips[cut_idx % n_clips]
+                src_dur = max(0.5, clip_durations.get(clip_path, 4.0))
+
+                if cut_idx == num_cuts - 1:
+                    seg_dur = max(0.5, round(b_rem_dur - b_accum, 3))
+                else:
+                    seg_dur = min(b_rem_dur - b_accum, cut_duration)
+
+                times_used = clip_usage_global.get(clip_path, 0)
+                max_offset = max(0.0, src_dur - seg_dur)
+                if times_used > 0 and max_offset > 0.5:
+                    ss = min(max_offset, round((times_used * 4.5) % (max_offset + 0.01), 2))
+                    zoom_factor = 1.12
+                else:
+                    ss = 0.0
+                    zoom_factor = 1.0
+
+                timeline.append({
+                    "index": len(timeline),
+                    "clip_path": clip_path,
+                    "ss": ss,
+                    "duration": seg_dur,
+                    "beat_idx": b_idx,
+                    "zoom_factor": zoom_factor,
+                })
+                clip_usage_global[clip_path] = times_used + 1
+                b_accum = round(b_accum + seg_dur, 3)
+
+        return timeline
+
+    # 2. Fallback when beats_data is None: strict sequential + intelligent reuse
     accumulated = 0.0
     needed_with_pad = target_duration + 0.15
+    clip_usage: dict[str, int] = {}
 
-    # First pass: strict sequential order 0..N-1
     for idx, clip_path in enumerate(valid_clips):
         if accumulated >= needed_with_pad:
             break
@@ -208,11 +294,12 @@ def _build_sequential_timeline(valid_clips: list[str], clip_durations: dict[str,
             "index": len(timeline),
             "clip_path": clip_path,
             "ss": 0.0,
-            "duration": seg_dur
+            "duration": seg_dur,
+            "zoom_factor": 1.0,
         })
+        clip_usage[clip_path] = 1
         accumulated += seg_dur
 
-    # Additional passes if needed: cycle support clips (skip index 0 if >1 clips exist)
     support_pool = valid_clips[1:] if len(valid_clips) > 1 else valid_clips
     pass_num = 1
     while accumulated < needed_with_pad and support_pool:
@@ -221,14 +308,17 @@ def _build_sequential_timeline(valid_clips: list[str], clip_durations: dict[str,
                 break
             src_dur = max(0.5, clip_durations.get(clip_path, slot_sec))
             seg_dur = min(slot_sec, src_dur)
+            times_used = clip_usage.get(clip_path, 1)
             max_offset = max(0.0, src_dur - seg_dur)
-            ss = min(max_offset, (pass_num * slot_sec) % (max_offset + 0.01)) if max_offset > 0.5 else 0.0
+            ss = min(max_offset, round((times_used * 4.5) % (max_offset + 0.01), 2)) if max_offset > 0.5 else 0.0
             timeline.append({
                 "index": len(timeline),
                 "clip_path": clip_path,
-                "ss": round(ss, 2),
-                "duration": seg_dur
+                "ss": ss,
+                "duration": seg_dur,
+                "zoom_factor": 1.12,
             })
+            clip_usage[clip_path] = times_used + 1
             accumulated += seg_dur
         pass_num += 1
 
@@ -294,6 +384,9 @@ def fast_ffmpeg_render(
     no_outro: bool,
     bgm_volume: float = 0.20,
     voice_rate: str = "+0%",
+    beats_data: list[dict] | None = None,
+    hero_clip: str | None = None,
+    verified_hero: bool = False,
 ) -> int:
     _ensure_python_deps(require_mpt_cli=False)
     t_start = time.time()
@@ -398,10 +491,18 @@ def fast_ffmpeg_render(
 
         timings["parallel_tts_subs_and_outro"] = round(time.time() - t0, 2)
 
-        # Phase 2: Build Strict Sequential Timeline & Single-Generation Direct GPU Filtergraph
+        # Phase 2: Build Strict Sequential Beat-Synchronized Timeline & Single-Generation Direct GPU Filtergraph
         t2 = time.time()
-        timeline = _build_sequential_timeline(valid_clips, clip_durations, target_duration=speech_dur, slot_sec=4.0)
-        print(f"[2/3] Single-pass GPU assembly of {len(timeline)} sequential slots (Hook #0: {os.path.basename(timeline[0]['clip_path'])})...")
+        timeline = _build_sequential_timeline(
+            valid_clips=valid_clips,
+            clip_durations=clip_durations,
+            target_duration=speech_dur,
+            slot_sec=4.0,
+            beats_data=beats_data,
+            hero_clip=hero_clip,
+            verified_hero=verified_hero,
+        )
+        print(f"[2/3] Single-pass GPU assembly of {len(timeline)} sequential slots (Hook #0: {os.path.basename(timeline[0]['clip_path'])}, beat_sync={bool(beats_data)})...")
 
         inputs: list[str] = []
         filter_parts: list[str] = []
@@ -415,9 +516,16 @@ def fast_ffmpeg_render(
                 "-t", f"{dur_s + 0.5:.3f}",
                 "-i", seg["clip_path"]
             ])
+            zoom_f = seg.get("zoom_factor", 1.0)
+            if zoom_f > 1.01:
+                zw = int(1080 * zoom_f)
+                zh = int(1920 * zoom_f)
+                scale_crop_filter = f"scale={zw}:{zh}:force_original_aspect_ratio=increase,crop=1080:1920"
+            else:
+                scale_crop_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+
             filter_parts.append(
-                f"[{idx}:v]scale=1080:1920:force_original_aspect_ratio=increase,"
-                f"crop=1080:1920,fps=30,setsar=1,"
+                f"[{idx}:v]{scale_crop_filter},fps=30,setsar=1,"
                 f"tpad=stop_mode=clone:stop_duration=1.0,trim=0:{dur_s:.3f},setpts=PTS-STARTPTS,"
                 f"format=yuv420p[v{idx}]"
             )
@@ -523,6 +631,7 @@ def fast_ffmpeg_render(
             "sequential_order_enforced": True,
             "hook_first_clip": timeline[0]["clip_path"],
             "clips_used_count": len(timeline),
+            "beat_synchronized": bool(beats_data),
             "phase_timings_seconds": timings,
             "total_render_seconds": total_elapsed
         }
@@ -662,6 +771,11 @@ def main():
         default_out = os.path.join(ROOT_DIR, "videos", f"render_{task_id[:8]}.mp4")
         dest_path = os.path.abspath(args.output_video) if args.output_video else default_out
 
+        # Extract beat-synchronization and hero assets if present
+        beats_data = materials_data.get("beats")
+        hero_clip = materials_data.get("hero_clip")
+        verified_hero = bool(materials_data.get("verified_real_photo") and hero_clip and os.path.exists(hero_clip))
+
         # Default fast path: Direct FFmpeg + GPU Engine
         if not args.legacy_engine and subtitle_style != "mpt_legacy":
             return fast_ffmpeg_render(
@@ -679,6 +793,9 @@ def main():
                 niche=niche,
                 no_outro=args.no_outro,
                 voice_rate=args.voice_rate,
+                beats_data=beats_data,
+                hero_clip=hero_clip,
+                verified_hero=verified_hero,
             )
 
         # Fallback path: Legacy MoneyPrinterTurbo CLI (with sequential order enforced)
