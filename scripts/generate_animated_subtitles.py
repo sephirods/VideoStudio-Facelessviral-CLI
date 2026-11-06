@@ -6,19 +6,26 @@ Produces ASS (Advanced SubStation Alpha) vector subtitles synchronized with Edge
 Features:
 - Zero Flicker / Parpadeo Cero: Contiguous time intervals without gaps between words or pauses.
 - Dynamic Karaoke Highlight: Active word in vibrant neon accent, previous words in white, upcoming in soft gray.
-- Zero Jitter: Constant-width line layout with fixed font metrics and center alignment at 58% height.
+- Zero Jitter & Mobile Width Guard: Smart character-budget chunking (max 20 chars) + auto-scale for long words
+  so text never collides with TikTok/Reels/Shorts right-side UI icons on 1080x1920 screens.
 - Styles:
-  1. 'hormozi' (Default): Rock-solid high-retention neon karaoke inside a high-contrast dark capsule.
-  2. 'hybrid': High-intensity 2-word bursts during hook (0-5s), transitioning to 3-word narrative blocks.
+  1. 'hormozi' (Default): Clean black stroke (Outline=7, Shadow=2) at 58% height with neon karaoke highlight.
+  2. 'hybrid': High-intensity 1-2 word bursts during the Hook (0-5s), transitioning to width-safe 3-word blocks.
   3. 'typewriter': Progressive letter-by-letter appearance with thick text outline (BorderStyle=1) and zero-gap dwell.
 """
 from __future__ import annotations
 
 import argparse
-import datetime
 import json
 import os
+import subprocess
 import sys
+
+if sys.stdout.encoding != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 try:
     import edge_tts
@@ -57,6 +64,76 @@ def seconds_to_ass_time(seconds: float) -> str:
     return f"{hours}:{minutes:02d}:{secs:02d}.{centis:02d}"
 
 
+def _probe_audio_duration(audio_path: str | None, fallback: float) -> float:
+    if not audio_path or not os.path.exists(audio_path):
+        return fallback
+    try:
+        res = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", audio_path
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return max(fallback, float(res.stdout.strip()))
+    except Exception:
+        pass
+    return fallback
+
+
+def _build_smart_chunks(cues: list, style: str, words_per_line: int, max_chars: int = 20) -> list[list]:
+    """
+    Groups word cues into width-safe mobile subtitle chunks:
+    - Respects character budget (`max_chars`, default 20 at Impact 74pt) to prevent horizontal overflow
+      or collision with right-hand TikTok/Shorts UI buttons.
+    - In 'hybrid' mode, uses rapid 1-2 word bursts (max 16 chars) during the first 5.0s (Hook),
+      then transitions to up to `words_per_line` words (max 20 chars).
+    """
+    base_max_words = words_per_line if words_per_line > 0 else 3
+    chunks: list[list] = []
+    current: list = []
+    current_len = 0
+
+    for cue in cues:
+        w_str = cue.content.strip().upper()
+        if not w_str:
+            continue
+        cue_start = cue.start.total_seconds()
+
+        if style == "hybrid" and cue_start < 5.0:
+            limit_words = min(2, base_max_words)
+            limit_chars = min(16, max_chars)
+        else:
+            limit_words = base_max_words
+            limit_chars = max_chars
+
+        added_len = len(w_str) if not current else (current_len + 1 + len(w_str))
+
+        if current and (len(current) >= limit_words or added_len > limit_chars):
+            chunks.append(current)
+            current = [cue]
+            current_len = len(w_str)
+        else:
+            current.append(cue)
+            current_len = added_len
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _line_scale_prefix(chunk_text: str, safe_chars: int = 19) -> str:
+    """Auto-scales ultra-long single words or phrases so they always stay within safe mobile margins."""
+    n = len(chunk_text)
+    if n <= safe_chars:
+        return ""
+    pct = max(70, min(96, int((safe_chars / n) * 100)))
+    return f"{{\\fscx{pct}\\fscy{pct}}}"
+
+
 def generate_animated_subtitles(
     text: str,
     voice: str = "es-MX-JorgeNeural",
@@ -65,7 +142,8 @@ def generate_animated_subtitles(
     style: str = "hormozi",
     accent_color: str = "yellow",
     words_per_line: int = 3,
-    box_background: bool = False
+    box_background: bool = False,
+    max_chars_per_line: int = 20,
 ) -> dict:
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed in the active environment.")
@@ -93,7 +171,8 @@ def generate_animated_subtitles(
     if not cues and hasattr(sub_maker, "subs"):
         cues = sub_maker.subs
 
-    total_duration_sec = cues[-1].end.total_seconds() if cues else 0.0
+    cues_duration_sec = cues[-1].end.total_seconds() if cues else 0.0
+    total_duration_sec = _probe_audio_duration(output_audio, cues_duration_sec)
     print(f"Captured {len(cues)} word cues. Audio duration: {total_duration_sec:.2f}s ({len(audio_bytes)} bytes).")
 
     # Select ASS Style configuration:
@@ -119,19 +198,14 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Impact,74,&H00FFFFFF,&H000000FF,&H00000000,{back_color},-1,0,0,0,100,100,2,0,{border_style},{outline_val},{shadow_val},5,30,30,0,1
+Style: Default,Impact,74,&H00FFFFFF,&H000000FF,&H00000000,{back_color},-1,0,0,0,100,100,2,0,{border_style},{outline_val},{shadow_val},5,60,90,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 
     dialogue_lines = []
-
-    # Group cues into natural chunks
-    chunks = []
-    chunk_size = words_per_line if words_per_line > 0 else 3
-    for i in range(0, len(cues), chunk_size):
-        chunks.append(cues[i:i + chunk_size])
+    chunks = _build_smart_chunks(cues, style=style, words_per_line=words_per_line, max_chars=max_chars_per_line)
 
     num_chunks = len(chunks)
     for c_idx, chunk in enumerate(chunks):
@@ -140,6 +214,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         chunk_start = chunk[0].start.total_seconds()
         chunk_word_end = chunk[-1].end.total_seconds()
+        full_chunk_str = " ".join(c.content.strip().upper() for c in chunk)
+        scale_tag = _line_scale_prefix(full_chunk_str)
 
         # Seamless Chunk-to-Chunk Handover:
         # If the gap to the next chunk is short (< 0.55s), hold the current chunk
@@ -152,17 +228,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             else:
                 chunk_final_end = chunk_word_end + 0.35
         else:
-            chunk_final_end = chunk_word_end + 0.40
+            chunk_final_end = min(total_duration_sec, chunk_word_end + 0.40) if total_duration_sec > 0 else chunk_word_end + 0.40
 
         num_words = len(chunk)
 
         if style == "typewriter":
-            # Typewriter: progressive letter reveal without black box jitter
             for w_idx, active_cue in enumerate(chunk):
                 w_text = active_cue.content.strip().upper()
                 w_start = chunk_start if w_idx == 0 else chunk[w_idx].start.total_seconds()
-                
-                # Next word start or chunk end
+
                 if w_idx + 1 < num_words:
                     next_w_start = chunk[w_idx + 1].start.total_seconds()
                 else:
@@ -176,30 +250,28 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 if before_str:
                     before_str += " "
 
-                # Type each character with contiguous intervals
-                for c_idx in range(1, n_chars + 1):
-                    t1 = w_start + (c_idx - 1) * char_dur
-                    t2 = w_start + c_idx * char_dur if c_idx < n_chars else active_cue.end.total_seconds()
-                    
-                    revealed = w_text[:c_idx]
+                for char_i in range(1, n_chars + 1):
+                    t1 = w_start + (char_i - 1) * char_dur
+                    t2 = w_start + char_i * char_dur if char_i < n_chars else active_cue.end.total_seconds()
+
+                    revealed = w_text[:char_i]
                     word_part = f"{{\\c{accent_ass}}}{revealed}"
-                    line_text = f"{{\\pos(540,1114)}}{{\\c&H00FFFFFF&}}{before_str}{word_part}"
+                    line_text = f"{{\\pos(540,1114)}}{scale_tag}{{\\c&H00FFFFFF&}}{before_str}{word_part}"
                     dialogue_lines.append(
                         f"Dialogue: 0,{seconds_to_ass_time(t1)},{seconds_to_ass_time(t2)},Default,,0,0,0,,{line_text}"
                     )
 
-                # Hold full word during pause until next word starts (zero gap)
                 t_hold_start = active_cue.end.total_seconds()
                 if next_w_start > t_hold_start + 0.02:
                     word_part = f"{{\\c{accent_ass}}}{w_text}"
-                    line_text = f"{{\\pos(540,1114)}}{{\\c&H00FFFFFF&}}{before_str}{word_part}"
+                    line_text = f"{{\\pos(540,1114)}}{scale_tag}{{\\c&H00FFFFFF&}}{before_str}{word_part}"
                     dialogue_lines.append(
                         f"Dialogue: 0,{seconds_to_ass_time(t_hold_start)},{seconds_to_ass_time(next_w_start)},Default,,0,0,0,,{line_text}"
                     )
 
         else:
             # Hormozi & Hybrid: Constant-width line with contiguous active word highlight
-            # ZERO gaps between words, ZERO horizontal shift, ZERO box expansion
+            # ZERO gaps between words, ZERO horizontal shift, ZERO mobile UI collision
             for w_idx, active_cue in enumerate(chunk):
                 w_start = chunk_start if w_idx == 0 else chunk[w_idx].start.total_seconds()
 
@@ -215,16 +287,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 for j, c in enumerate(chunk):
                     word_str = c.content.strip().upper()
                     if j < w_idx:
-                        # Spoken words: crisp pure white
                         parts.append(f"{{\\c&H00FFFFFF&}}{word_str}")
                     elif j == w_idx:
-                        # Active word: bright neon accent color
                         parts.append(f"{{\\c{accent_ass}}}{word_str}")
                     else:
-                        # Upcoming words: subtle soft translucent gray
                         parts.append(f"{{\\c&H00A0A0A0&}}{word_str}")
 
-                line_text = f"{{\\pos(540,1114)}}" + " ".join(parts)
+                line_text = f"{{\\pos(540,1114)}}{scale_tag}" + " ".join(parts)
                 dialogue_lines.append(
                     f"Dialogue: 0,{seconds_to_ass_time(w_start)},{seconds_to_ass_time(w_end)},Default,,0,0,0,,{line_text}"
                 )
@@ -239,7 +308,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         "audio_path": output_audio,
         "ass_path": output_ass,
         "duration_seconds": total_duration_sec,
+        "cues_duration_seconds": cues_duration_sec,
         "word_cues_count": len(cues),
+        "chunks_count": len(chunks),
         "dialogue_events_count": len(dialogue_lines)
     }
 
@@ -251,7 +322,8 @@ def main():
     parser.add_argument("--voice", default="es-MX-JorgeNeural", help="Edge-TTS voice")
     parser.add_argument("--style", default="hormozi", choices=["hormozi", "hybrid", "typewriter"], help="Subtitle animation style")
     parser.add_argument("--accent-color", default="yellow", help="Accent color name (yellow, cyan, green) or hex code (#FFFF00)")
-    parser.add_argument("--words-per-line", type=int, default=3, help="Words per subtitle block (default: 3)")
+    parser.add_argument("--words-per-line", type=int, default=3, help="Max words per subtitle block (default: 3)")
+    parser.add_argument("--max-chars", type=int, default=20, help="Max characters per line to prevent mobile UI overlap (default: 20)")
     parser.add_argument("--box-background", action="store_true", help="Enable semi-transparent dark box background instead of clean outline")
     parser.add_argument("--output-audio", required=True, help="Destination mp3 audio path")
     parser.add_argument("--output-ass", required=True, help="Destination ASS subtitle path")
@@ -278,9 +350,10 @@ def main():
         style=args.style,
         accent_color=args.accent_color,
         words_per_line=args.words_per_line,
-        box_background=args.box_background
+        box_background=args.box_background,
+        max_chars_per_line=args.max_chars
     )
-    print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['duration_seconds']:.2f}s)")
+    print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['chunks_count']} blocks, {res['duration_seconds']:.2f}s)")
 
 
 if __name__ == "__main__":

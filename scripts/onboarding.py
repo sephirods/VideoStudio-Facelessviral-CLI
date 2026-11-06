@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """
 Interactive Onboarding & Grill-Me CLI
-Permite configurar canales de forma interactiva desde la terminal o ser invocado por cualquier agente de IA.
-Incorpora selección de Idioma (Español vs Inglés Tier 1) e Identidad Sonora (Voz Oficial unificada).
+Permite configurar canales y grupos de canales de forma interactiva desde la terminal o ser invocado por IA.
+Incorpora selección de Idioma (Español vs Inglés Tier 1), Grupo de Canales (para cooldown compartido de 30 días
+de temas y miniaturas) e Identidad Sonora (Voz Oficial unificada).
 """
 
 import json
 import os
+import re
 import sys
+
+if sys.stdout.encoding != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CHANNELS_PATH = os.path.join(ROOT_DIR, "config", "channels.json")
@@ -26,6 +34,13 @@ VOICE_CATALOG = {
         "femenina_alternativa": ("en-US-AriaNeural", "Cálida, narrativa profunda, emotiva")
     }
 }
+
+
+def _slugify(val: str) -> str:
+    s = val.lower().strip()
+    for src, dst in (("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ñ", "n")):
+        s = s.replace(src, dst)
+    return re.sub(r"[^a-z0-9]+", "_", s).strip("_")
 
 
 def print_banner():
@@ -56,8 +71,8 @@ def interactive_onboarding():
     channels = data.get("channels", {})
 
     print("\n¿Qué deseas hacer hoy?")
-    print("1) Configurar un nuevo Grupo de Canales")
-    print("2) Modo Prueba / Demo (Video piloto local sin redes)")
+    print("1) Configurar un nuevo Canal / Grupo de Canales")
+    print("2) Modo Prueba / Demo (Pre-vuelo e insumos locales sin redes)")
     print("3) Listar canales registrados")
     print("4) Configurar APIs de Stock (Pixabay y Pexels)")
     print("5) Salir")
@@ -69,9 +84,9 @@ def interactive_onboarding():
         return
 
     if choice == "2":
-        print("\nEjecutando Modo Demo...")
+        print("\nEjecutando pre-vuelo Modo Demo...")
         import subprocess
-        subprocess.run([sys.executable, os.path.join(ROOT_DIR, "scripts", "produce_channel_video.py")])
+        subprocess.run([sys.executable, os.path.join(ROOT_DIR, "scripts", "produce_channel_video.py"), "--demo"])
         return
 
     elif choice == "3":
@@ -80,7 +95,8 @@ def interactive_onboarding():
         else:
             print(f"\nCanales registrados ({len(channels)}):")
             for cid, c in channels.items():
-                print(f" - [{cid}] {c.get('name')} | Idioma: {c.get('language', 'es').upper()} | Voz: {c.get('voice_preference')} | Nicho: {c.get('niche')}")
+                grp = c.get("group", c.get("niche", cid))
+                print(f" - [{cid}] {c.get('name')} | Grupo: {grp} | Idioma: {c.get('language', 'es').upper()} | Voz: {c.get('voice_preference')}")
             print(f"\nCanal activo predeterminado: {data.get('active_default_channel')}")
         return
 
@@ -94,26 +110,21 @@ def interactive_onboarding():
         print("\nHasta luego.")
         return
 
-    # Opción 1: Configurar canal
     print("\n--- PASO 1: Idioma y Mercado Objetivo ---")
     print("1) Español (Latinoamérica y España - Tráfico masivo y alta interacción)")
     print("2) Inglés (Tier 1: US, UK, CA, AU - RPM publicitario x3 a x5 superior)")
     lang_choice = input("Selecciona idioma (1 o 2) [1]: ").strip() or "1"
     language = "en" if lang_choice == "2" else "es"
 
-    print("\n--- PASO 2: Identidad y Nicho del Canal ---")
+    print("\n--- PASO 2: Identidad, Nicho y Grupo Anti-Repetición ---")
     try:
-        name = input("Nombre de la Marca / Canal (ej: Mente Oculta / Hidden Empire): ").strip()
-        if not name:
-            name = "Mi Canal Viral"
+        name = input("Nombre de la Marca / Canal (ej: Mente Oculta / Hidden Empire): ").strip() or "Mi Canal Viral"
+        cid = _slugify(name) or "canal_viral"
 
-        cid = name.lower().replace(" ", "_")
-        for char in "áéíóúñ/\\:*?\"<>|":
-            cid = cid.replace(char, "")
-
-        niche = input("Nicho / Temática (ej: Psicología Oscura, Secretos de Dinero, Curiosidades): ").strip()
-        if not niche:
-            niche = "Curiosidades y Finanzas"
+        niche = input("Nicho / Temática (ej: Psicología Oscura, Secretos de Dinero, Naturaleza): ").strip() or "Curiosidades y Finanzas"
+        default_group = _slugify(niche)[:30] or cid
+        group_in = input(f"Grupo de Canales para compartir cooldown de 30 días [{default_group}]: ").strip()
+        group_id = _slugify(group_in) if group_in else default_group
 
         print("\n--- PASO 3: Propósito del Canal ---")
         print("1) Monetización / Ganancias (Alto RPM, curiosidad y negocios)")
@@ -155,20 +166,22 @@ def interactive_onboarding():
         if not platforms:
             platforms = ["youtube_shorts", "tiktok"]
 
-        # Registrar canal (REGLA UNIVERSAL: duración siempre en rango de monetización [62, 72])
         new_channel = {
             "name": name,
+            "group": group_id,
             "language": language,
             "niche": niche,
             "purpose": purpose,
             "target_duration_seconds": [62, 72],
             "voice_preference": voice,
+            "subtitle_style": "hormozi",
+            "subtitle_color": "yellow",
             "platforms": platforms,
             "visual_assets": {
                 "outro_mode": "local",
                 "canva_user": None
             },
-            "style_notes": "Cortes dinámicos cada 2.5s, subtítulos contrastados al 58% con cápsula negra.",
+            "style_notes": "Cortes dinámicos cada 4s, subtítulos Hormozi al 58% con trazo negro nítido sin caja invasiva.",
             "schedule": {
                 "mode": "on_demand",
                 "time": "19:00",
@@ -188,12 +201,12 @@ def interactive_onboarding():
         print(f"  ¡CANAL REGISTRADO CON EXITO: {name} ({cid})!")
         print("=" * 65)
         print(f"Ficha guardada en: {CHANNELS_PATH}")
+        print(f"Grupo Anti-Repetición (30d): {group_id}")
         print(f"Idioma: {language.upper()} | Voz Oficial: {voice}")
         print(f"Duración: 62-72 segundos (Rango Universal de Monetización)")
-        print(f"Canal activo fijado: {cid}")
         print("\nPara conectar sus redes sociales ejecuta:")
         print(f"  python scripts/connect_account.py --channel {cid} --platform youtube")
-        print("\nPara producir tu primer video ejecuta:")
+        print("\nPara preparar insumos de producción ejecuta:")
         print(f"  python scripts/produce_channel_video.py --channel {cid}")
 
     except (KeyboardInterrupt, EOFError):

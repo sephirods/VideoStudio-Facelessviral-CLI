@@ -3,6 +3,7 @@
   "channels": {
     "canal_ejemplo": {
       "name": "Mente Oculta",
+      "group": "psicologia_y_misterio",
       "language": "es",
       "niche": "Psicología, Curiosidades y Secretos",
       "purpose": "monetization",
@@ -11,6 +12,8 @@
         72
       ],
       "voice_preference": "es-MX-JorgeNeural",
+      "subtitle_style": "hormozi",
+      "subtitle_color": "yellow",
       "platforms": [
         "youtube_shorts",
         "tiktok",
@@ -20,7 +23,7 @@
         "outro_mode": "local",
         "canva_user": null
       },
-      "style_notes": "Tono de misterio y autoridad, cortes dinámicos cada 2.5s, subtítulos contrastados al 58% con cápsula negra.",
+      "style_notes": "Tono de misterio y autoridad, cortes dinámicos cada 4s, subtítulos Hormozi al 58% con trazo negro nítido sin caja invasiva.",
       "schedule": {
         "mode": "on_demand",
         "time": "19:00",
