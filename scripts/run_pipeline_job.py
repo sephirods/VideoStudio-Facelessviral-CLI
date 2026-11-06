@@ -197,60 +197,100 @@ def _build_sequential_timeline(
 ) -> list[dict]:
     """
     Builds a strictly sequential, beat-synchronized timeline covering `target_duration` seconds:
-    - If beats_data is provided: aligns visuals strictly to each narration beat's duration.
+    - If beats_data is provided: aligns visuals strictly to each narration beat's real audio duration.
       Clips belonging to Beat N NEVER spill over into Beat N+1, preventing narration/visual desync.
-    - Intelligent Intra-Beat Reuse: If a beat needs more duration than available clips, it reuses
-      clips WITHIN the same beat using offset shifts (ss) + camera punch-in zoom (1.12x),
-      interleaving cuts so identical shots never repeat consecutively.
+    - All cuts are clean, native documentary cuts with zero artificial digital zoom distortion (zoom_factor = 1.0).
+    - Uses all available unique clips in natural sequential order without prematurely repeating a clip when unplayed clips exist.
     - Index 0 (hero_clip.mp4) is guaranteed first at 0.0s - 4.0s (Hook) when verified.
     """
     timeline: list[dict] = []
 
     # 1. Beat-synchronized timeline when beats_data is present
     if beats_data and isinstance(beats_data, list):
-        beat_words = [max(1, len(str(b.get("narration", "")).split())) for b in beats_data]
-        total_words = sum(beat_words) or 1
+        for b in beats_data:
+            if "duration" not in b and "start" in b and "end" in b:
+                try:
+                    b["duration"] = max(0.5, float(b["end"]) - float(b["start"]))
+                except (ValueError, TypeError):
+                    pass
 
-        beat_durations = [round((w / total_words) * target_duration, 3) for w in beat_words]
-        delta = round(target_duration - sum(beat_durations), 3)
-        if beat_durations:
-            beat_durations[-1] = max(0.5, round(beat_durations[-1] + delta, 3))
+        has_real_timestamps = all("duration" in b and float(b.get("duration", 0)) > 0 for b in beats_data)
+        if has_real_timestamps:
+            beat_durations = [round(float(b["duration"]), 3) for b in beats_data]
+            delta = round(target_duration - sum(beat_durations), 3)
+            if beat_durations:
+                beat_durations[-1] = max(0.5, round(beat_durations[-1] + delta, 3))
+        else:
+            n_beats = max(1, len(beats_data))
+            base_beat_dur = round(target_duration / n_beats, 3)
+            beat_durations = [base_beat_dur] * n_beats
+            delta = round(target_duration - sum(beat_durations), 3)
+            if beat_durations:
+                beat_durations[-1] = max(0.5, round(beat_durations[-1] + delta, 3))
 
         clip_usage_global: dict[str, int] = {}
+        all_unique_clips = [os.path.abspath(c) for c in valid_clips if os.path.exists(c)]
+        played_globally: set[str] = set()
+
+        reserved_by_beat = {
+            i: [os.path.abspath(c) for c in b.get("clips", []) if os.path.exists(c)]
+            for i, b in enumerate(beats_data)
+        }
 
         for b_idx, (b, b_target_dur) in enumerate(zip(beats_data, beat_durations)):
             b_rem_dur = b_target_dur
 
             # Special case for Beat 0 (Hook): hero clip placed first
             if b_idx == 0 and verified_hero and hero_clip and os.path.exists(hero_clip):
+                h_path = os.path.abspath(hero_clip)
                 h_dur = min(4.0, max(2.5, round(b_rem_dur * 0.5, 3)))
                 if b_rem_dur - h_dur < 1.5:
                     h_dur = b_rem_dur
                 timeline.append({
                     "index": len(timeline),
-                    "clip_path": os.path.abspath(hero_clip),
+                    "clip_path": h_path,
                     "ss": 0.0,
                     "duration": h_dur,
                     "beat_idx": 0,
                     "zoom_factor": 1.0,
                 })
-                clip_usage_global[os.path.abspath(hero_clip)] = clip_usage_global.get(os.path.abspath(hero_clip), 0) + 1
+                clip_usage_global[h_path] = clip_usage_global.get(h_path, 0) + 1
+                played_globally.add(h_path)
                 b_rem_dur = round(b_rem_dur - h_dur, 3)
                 if b_rem_dur <= 0.2:
                     continue
 
             # Clips belonging specifically to this beat
-            raw_b_clips = [os.path.abspath(c) for c in b.get("clips", []) if os.path.exists(c)]
+            raw_b_clips = reserved_by_beat[b_idx]
             if not raw_b_clips:
-                raw_b_clips = valid_clips
+                unplayed = [c for c in all_unique_clips if c not in played_globally]
+                raw_b_clips = unplayed if unplayed else all_unique_clips
 
             n_clips = len(raw_b_clips)
             num_cuts = max(n_clips, max(1, round(b_rem_dur / 4.0)))
             cut_duration = round(b_rem_dur / num_cuts, 3)
 
+            # Future clips reserved for subsequent beats
+            future_reserved = set()
+            for future_idx in range(b_idx + 1, len(beats_data)):
+                future_reserved.update(reserved_by_beat[future_idx])
+
             b_accum = 0.0
             for cut_idx in range(num_cuts):
-                clip_path = raw_b_clips[cut_idx % n_clips]
+                if cut_idx < n_clips:
+                    clip_path = raw_b_clips[cut_idx]
+                else:
+                    # Extra cut needed: use available unique clips in natural sequential order
+                    # without prematurely repeating a clip when unplayed clips exist
+                    available_unplayed = [
+                        c for c in all_unique_clips
+                        if c not in played_globally and c not in future_reserved
+                    ]
+                    if available_unplayed:
+                        clip_path = available_unplayed[0]
+                    else:
+                        clip_path = raw_b_clips[cut_idx % n_clips]
+
                 src_dur = max(0.5, clip_durations.get(clip_path, 4.0))
 
                 if cut_idx == num_cuts - 1:
@@ -262,28 +302,29 @@ def _build_sequential_timeline(
                 max_offset = max(0.0, src_dur - seg_dur)
                 if times_used > 0 and max_offset > 0.5:
                     ss = min(max_offset, round((times_used * 4.5) % (max_offset + 0.01), 2))
-                    zoom_factor = 1.12
                 else:
                     ss = 0.0
-                    zoom_factor = 1.0
 
+                # Clean native documentary cuts: zoom_factor is strictly 1.0
                 timeline.append({
                     "index": len(timeline),
                     "clip_path": clip_path,
                     "ss": ss,
                     "duration": seg_dur,
                     "beat_idx": b_idx,
-                    "zoom_factor": zoom_factor,
+                    "zoom_factor": 1.0,
                 })
                 clip_usage_global[clip_path] = times_used + 1
+                played_globally.add(clip_path)
                 b_accum = round(b_accum + seg_dur, 3)
 
         return timeline
 
-    # 2. Fallback when beats_data is None: strict sequential + intelligent reuse
+    # 2. Fallback when beats_data is None: strict sequential + clean cuts without zoom distortion
     accumulated = 0.0
     needed_with_pad = target_duration + 0.15
     clip_usage: dict[str, int] = {}
+    played_globally: set[str] = set()
 
     for idx, clip_path in enumerate(valid_clips):
         if accumulated >= needed_with_pad:
@@ -298,11 +339,13 @@ def _build_sequential_timeline(
             "zoom_factor": 1.0,
         })
         clip_usage[clip_path] = 1
+        played_globally.add(clip_path)
         accumulated += seg_dur
 
-    support_pool = valid_clips[1:] if len(valid_clips) > 1 else valid_clips
-    pass_num = 1
-    while accumulated < needed_with_pad and support_pool:
+    while accumulated < needed_with_pad:
+        support_pool = [c for c in valid_clips if c not in played_globally] or (valid_clips[1:] if len(valid_clips) > 1 else valid_clips)
+        if not support_pool:
+            break
         for clip_path in support_pool:
             if accumulated >= needed_with_pad:
                 break
@@ -316,11 +359,11 @@ def _build_sequential_timeline(
                 "clip_path": clip_path,
                 "ss": ss,
                 "duration": seg_dur,
-                "zoom_factor": 1.12,
+                "zoom_factor": 1.0,
             })
             clip_usage[clip_path] = times_used + 1
+            played_globally.add(clip_path)
             accumulated += seg_dur
-        pass_num += 1
 
     return timeline
 
@@ -422,6 +465,7 @@ def fast_ffmpeg_render(
                 words_per_line=3,
                 box_background=subtitle_box,
                 voice_rate=rate_val,
+                script_data={"full_script": full_script, "visual_beats": beats_data} if beats_data else None,
             )
             res_s["probed_duration"] = probe_media_duration(speech_audio, default=res_s.get("duration_seconds", 60.0))
             return res_s
@@ -468,6 +512,15 @@ def fast_ffmpeg_render(
             sub_res = fut_tts.result()
             clip_durations, outro_to_use = fut_outro.result()
 
+        # Align beats_data to exact audio timestamps returned from Edge-TTS cues
+        if beats_data and sub_res.get("beat_timestamps"):
+            for i, b in enumerate(beats_data):
+                if i < len(sub_res["beat_timestamps"]):
+                    bt = sub_res["beat_timestamps"][i]
+                    b["duration"] = bt["duration"]
+                    b["start"] = bt["start"]
+                    b["end"] = bt["end"]
+
         speech_dur = sub_res["probed_duration"]
         outro_dur = probe_media_duration(outro_to_use, default=4.2) if (outro_to_use and os.path.exists(outro_to_use)) else 0.0
         predicted_total = speech_dur + outro_dur
@@ -488,6 +541,13 @@ def fast_ffmpeg_render(
                     sub_res = _tts_and_subs_task(auto_rate)
                     speech_dur = sub_res["probed_duration"]
                     voice_rate = auto_rate
+                    if beats_data and sub_res.get("beat_timestamps"):
+                        for i, b in enumerate(beats_data):
+                            if i < len(sub_res["beat_timestamps"]):
+                                bt = sub_res["beat_timestamps"][i]
+                                b["duration"] = bt["duration"]
+                                b["start"] = bt["start"]
+                                b["end"] = bt["end"]
 
         timings["parallel_tts_subs_and_outro"] = round(time.time() - t0, 2)
 
@@ -516,13 +576,8 @@ def fast_ffmpeg_render(
                 "-t", f"{dur_s + 0.5:.3f}",
                 "-i", seg["clip_path"]
             ])
-            zoom_f = seg.get("zoom_factor", 1.0)
-            if zoom_f > 1.01:
-                zw = int(1080 * zoom_f)
-                zh = int(1920 * zoom_f)
-                scale_crop_filter = f"scale={zw}:{zh}:force_original_aspect_ratio=increase,crop=1080:1920"
-            else:
-                scale_crop_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+            # Clean native documentary cuts: always 1080x1920 cover-crop (no zoom jump-cuts)
+            scale_crop_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
 
             filter_parts.append(
                 f"[{idx}:v]{scale_crop_filter},fps=30,setsar=1,"

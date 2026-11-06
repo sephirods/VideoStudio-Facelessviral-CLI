@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -145,6 +146,8 @@ def generate_animated_subtitles(
     box_background: bool = False,
     max_chars_per_line: int = 20,
     voice_rate: str = "+0%",
+    script_data: dict | None = None,
+    visual_beats: list[dict] | None = None,
 ) -> dict:
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed in the active environment.")
@@ -192,6 +195,62 @@ def generate_animated_subtitles(
     cues_duration_sec = cues[-1].end.total_seconds() if cues else 0.0
     total_duration_sec = _probe_audio_duration(output_audio, cues_duration_sec)
     print(f"Captured {len(cues)} word cues. Audio duration: {total_duration_sec:.2f}s ({len(audio_bytes)} bytes).")
+
+    # Calculate exact start and end timestamps for each beat based on actual Edge-TTS cue objects
+    beats_to_track = visual_beats or (script_data.get("visual_beats") or script_data.get("beats") if isinstance(script_data, dict) else None)
+    beat_timestamps: list[dict] = []
+    if cues and beats_to_track and isinstance(beats_to_track, list):
+        def _clean_word(s: str) -> str:
+            return re.sub(r"[\W_]+", "", str(s).lower())
+
+        cue_words = [_clean_word(c.content) for c in cues]
+        cue_cursor = 0
+        num_cues = len(cues)
+        num_beats = len(beats_to_track)
+
+        for b_idx, b in enumerate(beats_to_track):
+            b_num = b.get("beat_index", b.get("beat", b_idx + 1))
+            b_role = b.get("role", f"BEAT_{b_idx + 1}")
+            b_narration = str(b.get("narration", "")).strip()
+            b_words = [_clean_word(w) for w in b_narration.split() if _clean_word(w)]
+
+            start_cue_idx = cue_cursor
+            if b_idx == num_beats - 1:
+                end_cue_idx = num_cues
+            else:
+                for w in b_words:
+                    for lookahead in range(cue_cursor, min(num_cues, cue_cursor + 8)):
+                        cw = cue_words[lookahead]
+                        if cw == w or (w and (w in cw or cw in w)):
+                            cue_cursor = lookahead + 1
+                            break
+                end_cue_idx = max(start_cue_idx + 1, cue_cursor) if b_words else start_cue_idx
+
+            cues_for_beat = cues[start_cue_idx:end_cue_idx]
+            if cues_for_beat:
+                b_start = cues_for_beat[0].start.total_seconds()
+                b_end = cues_for_beat[-1].end.total_seconds()
+            else:
+                b_start = cues[min(start_cue_idx, num_cues - 1)].start.total_seconds() if cues else 0.0
+                b_end = cues[min(end_cue_idx - 1, num_cues - 1)].end.total_seconds() if cues else b_start
+
+            beat_timestamps.append({
+                "beat": b_num,
+                "role": b_role,
+                "start": round(b_start, 3),
+                "end": round(b_end, 3),
+                "duration": round(max(0.5, b_end - b_start), 3),
+            })
+
+        # Contiguous handover: eliminate gaps between scenes so visual cuts match spoken sentences
+        for i in range(len(beat_timestamps) - 1):
+            next_start = beat_timestamps[i + 1]["start"]
+            if next_start > beat_timestamps[i]["start"]:
+                beat_timestamps[i]["end"] = next_start
+                beat_timestamps[i]["duration"] = round(next_start - beat_timestamps[i]["start"], 3)
+        if beat_timestamps:
+            beat_timestamps[-1]["end"] = max(beat_timestamps[-1]["end"], total_duration_sec)
+            beat_timestamps[-1]["duration"] = round(beat_timestamps[-1]["end"] - beat_timestamps[-1]["start"], 3)
 
     # Select ASS Style configuration:
     # - Default (box_background=False): BorderStyle=1 with heavy black stroke (Outline=7, Shadow=2)
@@ -329,7 +388,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         "cues_duration_seconds": cues_duration_sec,
         "word_cues_count": len(cues),
         "chunks_count": len(chunks),
-        "dialogue_events_count": len(dialogue_lines)
+        "dialogue_events_count": len(dialogue_lines),
+        "beat_timestamps": beat_timestamps,
     }
 
 
@@ -350,12 +410,13 @@ def main():
 
     full_text = args.text
     voice = args.voice
+    parsed_script = None
 
     if args.script_json and os.path.exists(args.script_json):
         with open(args.script_json, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        full_text = data.get("full_script") or full_text
-        voice = data.get("voice_name") or voice
+            parsed_script = json.load(f)
+        full_text = parsed_script.get("full_script") or full_text
+        voice = parsed_script.get("voice_name") or voice
 
     if not full_text:
         print("ERROR: Either --script-json or --text must be provided.", file=sys.stderr)
@@ -372,8 +433,9 @@ def main():
         box_background=args.box_background,
         max_chars_per_line=args.max_chars,
         voice_rate=args.voice_rate,
+        script_data=parsed_script,
     )
-    print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['chunks_count']} blocks, {res['duration_seconds']:.2f}s)")
+    print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['chunks_count']} blocks, {res['duration_seconds']:.2f}s, {len(res['beat_timestamps'])} beat timestamps)")
 
 
 if __name__ == "__main__":

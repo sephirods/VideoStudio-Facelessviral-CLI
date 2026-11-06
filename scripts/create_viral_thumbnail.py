@@ -57,7 +57,8 @@ def create_thumbnail(
     text_color: str = "#FFEB3B",  # Electric yellow
     stroke_color: str = "#000000",
     stroke_width: int = 10,
-    accent_color: str = "#FF1744"  # Red for badge
+    accent_color: str = "#FF1744",  # Red for badge
+    text_placement: str = "center",  # "top", "center", "bottom"
 ):
     main_text = sanitize_text(main_text)
     if badge_text:
@@ -146,8 +147,13 @@ def create_thumbnail(
         badge_total_h = badge_box_h + badge_gap
 
     total_block_h = badge_total_h + total_main_text_h
-    center_focal_y = int(h * 0.54)
-    block_start_y = max(int(h * 0.20), center_focal_y - int(total_block_h / 2))
+    if text_placement == "top":
+        block_start_y = int(h * 0.16)
+    elif text_placement == "bottom":
+        block_start_y = max(int(h * 0.52), int(h * 0.82) - total_block_h)
+    else:  # "center"
+        center_focal_y = int(h * 0.52)
+        block_start_y = max(int(h * 0.20), center_focal_y - int(total_block_h / 2))
 
     if has_badge:
         bx0 = int((w - badge_box_w) / 2)
@@ -209,6 +215,7 @@ def main():
     parser.add_argument("--badge-text", default=None, help="Top badge/pill text (optional)")
     parser.add_argument("--output", required=True, help="Output JPG path")
     parser.add_argument("--color", default="#FFEB3B", help="Text color hex (default yellow)")
+    parser.add_argument("--text-placement", default="center", choices=["top", "center", "bottom"], help="Text vertical placement")
     args = parser.parse_args()
 
     temp_frame = None
@@ -233,7 +240,8 @@ def main():
             output_path=args.output,
             main_text=args.hook_text,
             badge_text=args.badge_text,
-            text_color=args.color
+            text_color=args.color,
+            text_placement=args.text_placement,
         )
     finally:
         if temp_frame and os.path.exists(temp_frame):
