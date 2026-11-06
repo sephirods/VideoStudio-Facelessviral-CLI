@@ -13,6 +13,17 @@ import json
 import glob
 from datetime import datetime
 
+try:
+    from content_deduplication import register_publication
+except ImportError:
+    try:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from content_deduplication import register_publication
+    except Exception:
+        register_publication = None
+
+
 WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VIDEOS_DIR = os.path.join(WORKSPACE, "videos")
 PUBLICACIONES_DIR = os.path.join(VIDEOS_DIR, "publicaciones")
@@ -93,6 +104,28 @@ HASHTAGS / ETIQUETAS:
         shutil.copy2(bench_path, os.path.join(pub_dir, "datos_produccion.json"))
 
     print(f"Publication packaged: {pub_dir}")
+    # Register in deduplication and cooldown history
+    if register_publication and os.path.exists(script_path):
+        try:
+            with open(script_path, "r", encoding="utf-8") as sf:
+                sdata = json.load(sf)
+            ch_id = sdata.get("channel", "default_channel")
+            top_name = sdata.get("topic") or sdata.get("full_script", "")[:40]
+            hero_img = os.path.join(run_dir, "hero_image.jpg")
+            thumb_dest = os.path.join(pub_dir, "miniatura_viral.jpg")
+            vid_dest = os.path.join(pub_dir, "video_final.mp4")
+            register_publication(
+                channel_id=ch_id,
+                topic=top_name,
+                keywords=top_name,
+                image_path=hero_img if os.path.exists(hero_img) else thumb_dest,
+                thumbnail_path=thumb_dest if os.path.exists(thumb_dest) else None,
+                video_path=vid_dest if os.path.exists(vid_dest) else None
+            )
+            print(f"[DEDUPLICATION] Publicación registrada en historial para canal '{ch_id}'.")
+        except Exception as e:
+            print(f"[WARN] Error registrando en historial: {e}")
+
 
     # Copy approved clips to B-roll category
     approved_path = os.path.join(run_dir, "approved_materials.json")
