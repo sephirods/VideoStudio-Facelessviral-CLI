@@ -549,7 +549,7 @@ def main():
     parser.add_argument("--subtitle-style", choices=["hybrid", "hormozi", "typewriter", "mpt_legacy"], default=None, help="Dynamic subtitle style")
     parser.add_argument("--subtitle-color", default=None, help="Accent color (e.g. yellow, cyan, green)")
     parser.add_argument("--subtitle-box", action="store_true", help="Enable semi-transparent dark box background (default is clean outline)")
-    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS speech rate adjustment (e.g. +10%, -8%)")
+    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS speech rate adjustment (e.g. +10%%, -8%%)")
     parser.add_argument("--legacy-engine", action="store_true", help="Fallback to legacy MoneyPrinterTurbo MoviePy render engine")
     args = parser.parse_args()
 

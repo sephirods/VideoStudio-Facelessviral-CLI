@@ -71,13 +71,14 @@ def get_encoder_candidates() -> list[list[str]]:
 
 
 def generate_tts_audio(text: str, voice: str, out_path: str):
-    cmd = [
-        "edge-tts",
-        "--voice", voice,
-        "--text", text,
-        "--write-media", out_path
-    ]
-    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    import asyncio
+    import edge_tts
+
+    async def _save() -> None:
+        comm = edge_tts.Communicate(text, voice)
+        await asyncio.wait_for(comm.save(out_path), timeout=20.0)
+
+    asyncio.run(_save())
 
 
 def extract_video_last_frame(video_path: str, out_img: str) -> bool:

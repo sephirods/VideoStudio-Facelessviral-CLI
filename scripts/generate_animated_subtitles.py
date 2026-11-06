@@ -152,16 +152,33 @@ def generate_animated_subtitles(
     accent_ass = COLOR_MAP.get(accent_color.lower(), hex_to_ass_color(accent_color))
 
     print(f"Synthesizing voice with Edge-TTS (voice: '{voice}', rate: '{voice_rate}', boundary: 'WordBoundary')...")
-    comm = edge_tts.Communicate(text, voice, rate=voice_rate, boundary="WordBoundary")
-    sub_maker = SubMaker()
-    audio_bytes = bytearray()
+    import asyncio
 
-    for chunk in comm.stream_sync():
-        chunk_type = chunk.get("type")
-        if chunk_type == "audio":
-            audio_bytes.extend(chunk.get("data", b""))
-        elif chunk_type in ("WordBoundary", "SentenceBoundary"):
-            sub_maker.feed(chunk)
+    async def _fetch_tts_once() -> tuple[bytearray, SubMaker]:
+        c = edge_tts.Communicate(text, voice, rate=voice_rate, boundary="WordBoundary")
+        sm = SubMaker()
+        buf = bytearray()
+        async for chunk in c.stream():
+            chunk_type = chunk.get("type")
+            if chunk_type == "audio":
+                buf.extend(chunk.get("data", b""))
+            elif chunk_type in ("WordBoundary", "SentenceBoundary"):
+                sm.feed(chunk)
+        return buf, sm
+
+    async def _fetch_tts_with_retries() -> tuple[bytearray, SubMaker]:
+        last_exc: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                buf, sm = await asyncio.wait_for(_fetch_tts_once(), timeout=35.0)
+                if buf:
+                    return buf, sm
+            except Exception as exc:
+                last_exc = exc
+                await asyncio.sleep(0.8 * attempt)
+        raise RuntimeError(f"Edge-TTS timed out or returned empty audio after 3 attempts: {last_exc}")
+
+    audio_bytes, sub_maker = asyncio.run(_fetch_tts_with_retries())
 
     if output_audio:
         os.makedirs(os.path.dirname(os.path.abspath(output_audio)), exist_ok=True)
@@ -326,7 +343,7 @@ def main():
     parser.add_argument("--words-per-line", type=int, default=3, help="Max words per subtitle block (default: 3)")
     parser.add_argument("--max-chars", type=int, default=20, help="Max characters per line to prevent mobile UI overlap (default: 20)")
     parser.add_argument("--box-background", action="store_true", help="Enable semi-transparent dark box background instead of clean outline")
-    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS rate adjustment (e.g. +10%, -8%)")
+    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS rate adjustment (e.g. +10%%, -8%%)")
     parser.add_argument("--output-audio", required=True, help="Destination mp3 audio path")
     parser.add_argument("--output-ass", required=True, help="Destination ASS subtitle path")
     args = parser.parse_args()

@@ -6,6 +6,8 @@ Universal Real Photograph Fetcher & 2x2 Contact Grid Builder
 2. Filters out non-photographic noise (maps, diagrams, logos, coats of arms, charts, icons).
 3. Integrates with content_deduplication.py (dHash + URL cooldown per channel group).
 4. Builds a numbered 2x2 visual contact grid (candidates_grid.jpg) + clean hero_image.jpg.
+5. Precision retry support: '--source wikipedia|mixed' (article lead images, immune to homonyms),
+   '--exclude-terms' and '--exclude-urls-file' so a retry never shows an already-rejected photo.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -95,6 +97,58 @@ def search_wikimedia(query: str, limit: int = 16) -> list[dict]:
     except Exception as e:
         print(f"[WARN] Error buscando en Wikimedia Commons: {e}", file=sys.stderr)
         return []
+
+
+def search_wikipedia_pageimages(query: str, langs: tuple = ("en", "es"), limit: int = 6) -> list[dict]:
+    """
+    Busca ARTICULOS de Wikipedia que coincidan con la consulta y devuelve su imagen principal
+    (lead image). Es la fuente mas precisa para entidades concretas (personas, lugares, objetos
+    historicos, especies) porque la imagen la eligieron editores humanos para ese articulo,
+    evitando homonimos de Commons (ej. 'Big Ear' telescopio vs planta 'Big Ears').
+    """
+    results: list[dict] = []
+    seen_urls: set[str] = set()
+    for lang in langs:
+        url = (
+            f"https://{lang}.wikipedia.org/w/api.php?action=query&generator=search"
+            f"&gsrsearch={urllib.parse.quote(query)}&gsrlimit={limit}"
+            f"&prop=pageimages&piprop=thumbnail|original&pithumbsize=1920&format=json"
+        )
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, timeout=8) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except Exception as e:
+            print(f"[WARN] Error buscando en Wikipedia ({lang}): {e}", file=sys.stderr)
+            continue
+        pages = list((data.get("query", {}).get("pages", {}) or {}).values())
+        pages.sort(key=lambda p: p.get("index", 999))  # Respect search relevance order
+        for page in pages:
+            thumb = page.get("thumbnail") or {}
+            orig = page.get("original") or {}
+            dl_url = thumb.get("source") or orig.get("source")
+            if not dl_url:
+                continue
+            orig_url = orig.get("source") or dl_url
+            ext = os.path.splitext(orig_url.split("?")[0])[1].lower()
+            if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+                continue
+            width = int(thumb.get("width") or orig.get("width") or 0)
+            height = int(thumb.get("height") or orig.get("height") or 0)
+            if width < 500 or height < 400:
+                continue
+            if orig_url in seen_urls:
+                continue
+            seen_urls.add(orig_url)
+            results.append({
+                "title": f"Wikipedia ({lang}): {page.get('title', '')} | {os.path.basename(orig_url.split('?')[0])}",
+                "url": dl_url,
+                "original_url": orig_url,
+                "width": width,
+                "height": height,
+                "pixels": width * height,
+            })
+    return results
 
 
 def search_pixabay_photos(query: str, limit: int = 12) -> list[dict]:
@@ -194,17 +248,54 @@ def main():
     parser.add_argument("--channel", default=None, help="ID del canal para control de deduplicacion por grupo")
     parser.add_argument("--grid-only", action="store_true", help="Solo generar la cuadricula sin fijar hero_image")
     parser.add_argument("--cleanup-candidates", action="store_true", help="Borrar archivos individuales tras guardar hero_image y grid")
+    parser.add_argument("--source", choices=["commons", "wikipedia", "mixed"], default="commons",
+                        help="commons = Wikimedia Commons (+Pixabay); wikipedia = imagen principal de articulos; mixed = Wikipedia primero y luego Commons")
+    parser.add_argument("--exclude-terms", default="", help="Palabras separadas por coma que descartan un resultado si aparecen en su titulo (ej. homonimos: 'plant,flower')")
+    parser.add_argument("--exclude-urls-file", default=None, help="JSON con lista de URLs ya rechazadas en intentos previos (no se vuelven a mostrar)")
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
     candidates_dir = os.path.join(args.output_dir, "real_candidates")
     os.makedirs(candidates_dir, exist_ok=True)
+    # Clear candidates from previous attempts so grids never mix old and new photos
+    for old in os.listdir(candidates_dir):
+        if old.startswith("candidate_"):
+            try:
+                os.remove(os.path.join(candidates_dir, old))
+            except OSError:
+                pass
 
     t0 = time.time()
-    raw_results = search_wikimedia(args.query, limit=16)
-    if len(raw_results) < args.count:
-        pix_results = search_pixabay_photos(args.query, limit=12)
-        raw_results.extend(pix_results)
+    if args.source == "wikipedia":
+        raw_results = search_wikipedia_pageimages(args.query)
+    elif args.source == "mixed":
+        raw_results = search_wikipedia_pageimages(args.query) + search_wikimedia(args.query, limit=16)
+    else:
+        raw_results = search_wikimedia(args.query, limit=16)
+        if len(raw_results) < args.count:
+            raw_results.extend(search_pixabay_photos(args.query, limit=12))
+
+    excluded_words = [w.strip().lower() for w in args.exclude_terms.split(",") if w.strip()]
+    excluded_urls: set[str] = set()
+    if args.exclude_urls_file and os.path.exists(args.exclude_urls_file):
+        try:
+            with open(args.exclude_urls_file, "r", encoding="utf-8") as f:
+                excluded_urls = set(json.load(f) or [])
+        except Exception:
+            excluded_urls = set()
+
+    filtered: list[dict] = []
+    seen: set[str] = set()
+    for item in raw_results:
+        key = item.get("original_url") or item["url"]
+        if key in seen or key in excluded_urls or item["url"] in excluded_urls:
+            continue
+        haystack = f"{item.get('title', '')} {key}".lower()
+        if excluded_words and any(w in haystack for w in excluded_words):
+            continue
+        seen.add(key)
+        filtered.append(item)
+    raw_results = filtered
 
     if not raw_results:
         print(json.dumps({"success": False, "error": f"No se encontraron imagenes reales para: {args.query}"}, ensure_ascii=False))

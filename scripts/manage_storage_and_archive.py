@@ -322,35 +322,42 @@ def purge_redundant_storage(
                 pass
 
     # 4. LRU cap on storage/cache_videos (1.5 GB = 1500 MB default)
-    cache_dir = os.path.join(ENGINE_STORAGE, "cache_videos")
-    remaining_cache_bytes = 0
-    if os.path.exists(cache_dir) and max_cache_mb >= 0:
-        max_bytes = int(max_cache_mb * 1024 * 1024)
-        files_info = []
-        total_bytes = 0
-        for root, _, files in os.walk(cache_dir):
-            for fn in files:
-                fp = os.path.join(root, fn)
-                try:
-                    st = os.stat(fp)
-                    files_info.append((st.st_mtime, st.st_size, fp))
-                    total_bytes += st.st_size
-                except OSError:
-                    pass
+    cache_dirs_to_check = [
+        os.path.join(WORKSPACE, "storage", "cache_videos"),
+    ]
+    if ENGINE_STORAGE and os.path.exists(os.path.join(ENGINE_STORAGE, "cache_videos")):
+        if os.path.abspath(os.path.join(ENGINE_STORAGE, "cache_videos")) != os.path.abspath(os.path.join(WORKSPACE, "storage", "cache_videos")):
+            cache_dirs_to_check.append(os.path.join(ENGINE_STORAGE, "cache_videos"))
 
-        if total_bytes > max_bytes:
-            # Sort oldest first (LRU eviction)
-            files_info.sort(key=lambda x: x[0])
-            for _, sz, fp in files_info:
-                if total_bytes <= max_bytes:
-                    break
-                try:
-                    os.remove(fp)
-                    total_bytes -= sz
-                    freed_cache += sz
-                except OSError:
-                    pass
-        remaining_cache_bytes = total_bytes
+    remaining_cache_bytes = 0
+    for cache_dir in cache_dirs_to_check:
+        if os.path.exists(cache_dir) and max_cache_mb >= 0:
+            max_bytes = int(max_cache_mb * 1024 * 1024)
+            files_info = []
+            total_bytes = 0
+            for root, _, files in os.walk(cache_dir):
+                for fn in files:
+                    fp = os.path.join(root, fn)
+                    try:
+                        st = os.stat(fp)
+                        files_info.append((st.st_mtime, st.st_size, fp))
+                        total_bytes += st.st_size
+                    except OSError:
+                        pass
+
+            if total_bytes > max_bytes:
+                # Sort oldest first (LRU eviction)
+                files_info.sort(key=lambda x: x[0])
+                for _, sz, fp in files_info:
+                    if total_bytes <= max_bytes:
+                        break
+                    try:
+                        os.remove(fp)
+                        total_bytes -= sz
+                        freed_cache += sz
+                    except OSError:
+                        pass
+            remaining_cache_bytes += total_bytes
 
     total_freed_mb = round((freed_local + freed_tasks + freed_tests + freed_cache) / (1024 * 1024), 2)
     summary = {
