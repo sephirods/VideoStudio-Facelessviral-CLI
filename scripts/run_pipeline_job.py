@@ -158,6 +158,7 @@ def main():
     parser.add_argument("--no-outro", action="store_true", help="Disable automatic outro appending")
     parser.add_argument("--subtitle-style", choices=["hybrid", "hormozi", "typewriter", "mpt_legacy"], default=None, help="Dynamic subtitle style")
     parser.add_argument("--subtitle-color", default=None, help="Accent color (e.g. yellow, cyan, green)")
+    parser.add_argument("--subtitle-box", action="store_true", help="Enable semi-transparent dark box background (default is clean outline)")
     args = parser.parse_args()
 
     if args.script_json and not os.path.isabs(args.script_json):
@@ -287,7 +288,7 @@ def main():
             custom_speech_audio = os.path.join(task_dir, "speech.mp3")
             dynamic_ass_path = os.path.join(task_dir, "dynamic_subtitles.ass")
 
-            print(f"Generating dynamic animated subtitles (Style: '{subtitle_style}', Accent: '{subtitle_color}', Voice: '{final_voice}')...")
+            print(f"Generating dynamic animated subtitles (Style: '{subtitle_style}', Accent: '{subtitle_color}', Voice: '{final_voice}', Box: '{args.subtitle_box}')...")
             generate_animated_subtitles(
                 text=full_script,
                 voice=final_voice,
@@ -296,6 +297,7 @@ def main():
                 style=subtitle_style,
                 accent_color=subtitle_color,
                 words_per_line=3,
+                box_background=args.subtitle_box
             )
 
             argv.extend([

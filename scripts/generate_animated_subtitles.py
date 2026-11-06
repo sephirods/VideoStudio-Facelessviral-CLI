@@ -64,7 +64,8 @@ def generate_animated_subtitles(
     output_ass: str | None = None,
     style: str = "hormozi",
     accent_color: str = "yellow",
-    words_per_line: int = 3
+    words_per_line: int = 3,
+    box_background: bool = False
 ) -> dict:
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed in the active environment.")
@@ -96,11 +97,19 @@ def generate_animated_subtitles(
     print(f"Captured {len(cues)} word cues. Audio duration: {total_duration_sec:.2f}s ({len(audio_bytes)} bytes).")
 
     # Select ASS Style configuration:
-    # - hormozi / hybrid: BorderStyle=3 (high-contrast dark capsule) with constant-width line
-    # - typewriter: BorderStyle=1 (thick black outline) so progressive characters don't cause box resizing
-    border_style = 1 if style == "typewriter" else 3
-    outline_val = 6 if style == "typewriter" else 10
-    back_color = "&H00000000" if style == "typewriter" else "&HA0000000"
+    # - Default (box_background=False): BorderStyle=1 with heavy black stroke (Outline=7, Shadow=2)
+    #   Cleaner, modern TikTok/Hormozi look without blocking background footage.
+    # - box_background=True: BorderStyle=3 (high-contrast dark capsule box)
+    if box_background:
+        border_style = 3
+        outline_val = 10
+        shadow_val = 0
+        back_color = "&HA0000000"
+    else:
+        border_style = 1
+        outline_val = 7
+        shadow_val = 2
+        back_color = "&H80000000"
 
     ass_header = f"""[Script Info]
 ScriptType: v4.00+
@@ -110,7 +119,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Impact,74,&H00FFFFFF,&H000000FF,&H00000000,{back_color},-1,0,0,0,100,100,2,0,{border_style},{outline_val},0,5,30,30,0,1
+Style: Default,Impact,74,&H00FFFFFF,&H000000FF,&H00000000,{back_color},-1,0,0,0,100,100,2,0,{border_style},{outline_val},{shadow_val},5,30,30,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -243,6 +252,7 @@ def main():
     parser.add_argument("--style", default="hormozi", choices=["hormozi", "hybrid", "typewriter"], help="Subtitle animation style")
     parser.add_argument("--accent-color", default="yellow", help="Accent color name (yellow, cyan, green) or hex code (#FFFF00)")
     parser.add_argument("--words-per-line", type=int, default=3, help="Words per subtitle block (default: 3)")
+    parser.add_argument("--box-background", action="store_true", help="Enable semi-transparent dark box background instead of clean outline")
     parser.add_argument("--output-audio", required=True, help="Destination mp3 audio path")
     parser.add_argument("--output-ass", required=True, help="Destination ASS subtitle path")
     args = parser.parse_args()
@@ -267,7 +277,8 @@ def main():
         output_ass=args.output_ass,
         style=args.style,
         accent_color=args.accent_color,
-        words_per_line=args.words_per_line
+        words_per_line=args.words_per_line,
+        box_background=args.box_background
     )
     print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['duration_seconds']:.2f}s)")
 

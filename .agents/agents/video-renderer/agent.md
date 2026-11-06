@@ -41,13 +41,13 @@ Ejecutar el ensamblado técnico del video en formato vertical `9:16` (`1080x1920
 3. **Música de Fondo Dinámica y Segura (BGM):**
    - Configura `--bgm-type random` a volumen `--bgm-volume 0.2` (-20 dB) para alternar entre pistas libres de copyright sin saturar la voz principal.
 
-4. **Subtítulos Dinámicos Animados (Karaoke Hormozi y Máquina de Escribir):**
-   - Generación vectorizada en tiempo real mediante `scripts/generate_animated_subtitles.py` sincronizada a nivel de microsegundo con `WordBoundary` de Edge-TTS.
-   - **Estilo Híbrido Viral (`--subtitle-style hybrid` por defecto):**
-     - **Compás 1 (0-5s):** Animación tipo máquina de escribir (letra por letra) con máscara de canal alfa ASS (`\alpha&HFF&`) para atrapar la atención visual inmediata con **cero temblor horizontal**.
-     - **Compases 2 al 5 (5-70s):** Bloques de lectura rápida (3 a 5 palabras) con la palabra hablada activa resaltada en color neón dinámico (`yellow`, `cyan`, `green`) y aumento de escala del 15% (`\fscx115\fscy115`).
-   - **Posicionamiento Inamovible:** Anclaje vertical exacto al 58% de la pantalla (`\pos(540,1114)`) para máxima visibilidad sin ser tapado por botones de TikTok/Reels ni el encabezado de Shorts.
-   - **Ensamblado GPU:** Quemado de subtítulos vectoriales con `libass` acelerado por GPU (NVENC/AMF) en el mismo pase del renderizado final, reduciendo el tiempo de render de 2 minutos a menos de 2 segundos.
+4. **Subtítulos Dinámicos Animados (Estilo Viral Hormozi / CapCut):**
+   - Generación vectorizada en tiempo real mediante `scripts/generate_animated_subtitles.py` sincronizada a nivel de microsegundo con `WordBoundary` de Edge-TTS con **intervalos 100% contiguos (Cero Parpadeo)**.
+   - **Estilo Hormozi Limpio (`--subtitle-style hormozi` por defecto):**
+     - **Trazo Negro Nítido sin Caja Invasiva:** Tipografía `Impact` (74pt) con contorno negro nítido (`Outline=7, Shadow=2`). Ya no requiere caja o fondo negro opaco que tape el metraje de video; el trazo exterior garantiza 100% de legibilidad y estética profesional moderna.
+     - **Karaoke Dinámico:** Bloques de 3 palabras en ancho constante. La palabra hablada se ilumina en amarillo neón (`&H0000FFFF&` o color del canal), palabras previas en blanco puro y siguientes en gris suave.
+   - **Posicionamiento Inamovible:** Anclaje vertical exacto al 58% de la pantalla (`\pos(540,1114)`) para máxima visibilidad sin colisión con controles de TikTok/Reels o títulos de Shorts.
+   - **Ensamblado GPU:** Quemado de subtítulos vectoriales con `libass` acelerado por GPU (NVENC/AMF) en el mismo pase del renderizado final.
 
 5. **Anexión Dinámica de Outro Personalizado:**
    - Según la ficha del canal en `config/channels.json`:
