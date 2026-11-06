@@ -280,16 +280,27 @@ def _build_sequential_timeline(
                 if cut_idx < n_clips:
                     clip_path = raw_b_clips[cut_idx]
                 else:
-                    # Extra cut needed: use available unique clips in natural sequential order
-                    # without prematurely repeating a clip when unplayed clips exist
+                    # Extra cut needed: use available unique clips not used recently (anti-pingpong & anti-repetition)
+                    forbidden_recent = set()
+                    if len(timeline) >= 1:
+                        forbidden_recent.add(timeline[-1]["clip_path"])
+                    if len(timeline) >= 2:
+                        forbidden_recent.add(timeline[-2]["clip_path"])
+
                     available_unplayed = [
                         c for c in all_unique_clips
-                        if c not in played_globally and c not in future_reserved
+                        if c not in played_globally and c not in future_reserved and c not in forbidden_recent
                     ]
                     if available_unplayed:
                         clip_path = available_unplayed[0]
                     else:
-                        clip_path = raw_b_clips[cut_idx % n_clips]
+                        # Beat isolation: reuse clips belonging strictly to this beat (raw_b_clips)
+                        # If multiple clips exist in this beat, avoid recent 2-cut ping-pong
+                        candidates = [c for c in raw_b_clips if c not in forbidden_recent]
+                        if not candidates:
+                            # When raw_b_clips has only 1 clip or all were recently used, pick from raw_b_clips with lowest usage
+                            candidates = raw_b_clips or all_unique_clips
+                        clip_path = min(candidates, key=lambda c: clip_usage_global.get(c, 0))
 
                 src_dur = max(0.5, clip_durations.get(clip_path, 4.0))
 
