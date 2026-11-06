@@ -144,14 +144,15 @@ def generate_animated_subtitles(
     words_per_line: int = 3,
     box_background: bool = False,
     max_chars_per_line: int = 20,
+    voice_rate: str = "+0%",
 ) -> dict:
     if edge_tts is None:
         raise RuntimeError("edge-tts is not installed in the active environment.")
 
     accent_ass = COLOR_MAP.get(accent_color.lower(), hex_to_ass_color(accent_color))
 
-    print(f"Synthesizing voice with Edge-TTS (voice: '{voice}', boundary: 'WordBoundary')...")
-    comm = edge_tts.Communicate(text, voice, boundary="WordBoundary")
+    print(f"Synthesizing voice with Edge-TTS (voice: '{voice}', rate: '{voice_rate}', boundary: 'WordBoundary')...")
+    comm = edge_tts.Communicate(text, voice, rate=voice_rate, boundary="WordBoundary")
     sub_maker = SubMaker()
     audio_bytes = bytearray()
 
@@ -325,6 +326,7 @@ def main():
     parser.add_argument("--words-per-line", type=int, default=3, help="Max words per subtitle block (default: 3)")
     parser.add_argument("--max-chars", type=int, default=20, help="Max characters per line to prevent mobile UI overlap (default: 20)")
     parser.add_argument("--box-background", action="store_true", help="Enable semi-transparent dark box background instead of clean outline")
+    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS rate adjustment (e.g. +10%, -8%)")
     parser.add_argument("--output-audio", required=True, help="Destination mp3 audio path")
     parser.add_argument("--output-ass", required=True, help="Destination ASS subtitle path")
     args = parser.parse_args()
@@ -351,7 +353,8 @@ def main():
         accent_color=args.accent_color,
         words_per_line=args.words_per_line,
         box_background=args.box_background,
-        max_chars_per_line=args.max_chars
+        max_chars_per_line=args.max_chars,
+        voice_rate=args.voice_rate,
     )
     print(f"Animated subtitles generated successfully: {res['ass_path']} ({res['dialogue_events_count']} events, {res['chunks_count']} blocks, {res['duration_seconds']:.2f}s)")
 

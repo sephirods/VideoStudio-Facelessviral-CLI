@@ -293,6 +293,7 @@ def fast_ffmpeg_render(
     niche: str | None,
     no_outro: bool,
     bgm_volume: float = 0.20,
+    voice_rate: str = "+0%",
 ) -> int:
     _ensure_python_deps(require_mpt_cli=False)
     t_start = time.time()
@@ -316,8 +317,8 @@ def fast_ffmpeg_render(
         outro_path = os.path.join(work_dir, "dynamic_outro.mp4")
         last_clip_frame = os.path.join(work_dir, "last_clip_frame.jpg")
 
-        def _tts_and_subs_task() -> dict:
-            print(f"[1/3] Generating Edge-TTS voice & '{subtitle_style}' subtitles (Voice: {final_voice})...")
+        def _tts_and_subs_task(rate_val: str = voice_rate) -> dict:
+            print(f"[1/3] Generating Edge-TTS voice & '{subtitle_style}' subtitles (Voice: {final_voice}, Rate: {rate_val})...")
             res_s = generate_animated_subtitles(
                 text=full_script,
                 voice=final_voice,
@@ -326,7 +327,8 @@ def fast_ffmpeg_render(
                 style=subtitle_style,
                 accent_color=subtitle_color,
                 words_per_line=3,
-                box_background=subtitle_box
+                box_background=subtitle_box,
+                voice_rate=rate_val,
             )
             res_s["probed_duration"] = probe_media_duration(speech_audio, default=res_s.get("duration_seconds", 60.0))
             return res_s
@@ -374,6 +376,26 @@ def fast_ffmpeg_render(
             clip_durations, outro_to_use = fut_outro.result()
 
         speech_dur = sub_res["probed_duration"]
+        outro_dur = probe_media_duration(outro_to_use, default=4.2) if (outro_to_use and os.path.exists(outro_to_use)) else 0.0
+        predicted_total = speech_dur + outro_dur
+
+        # Automatic Pre-Render Monetization Window Calibration (62.0s - 72.0s, target ~66.8s)
+        if voice_rate == "+0%" and (predicted_total < 62.8 or predicted_total > 71.2):
+            ideal_speech = max(55.0, 66.8 - outro_dur)
+            ratio = speech_dur / ideal_speech
+            # If within natural speech cadence (-20% to +25%), auto-recalibrate TTS + ASS before GPU render!
+            if 0.78 <= ratio <= 1.26:
+                pct_delta = max(-20, min(25, int(round((ratio - 1.0) * 100))))
+                if pct_delta != 0:
+                    auto_rate = f"{pct_delta:+d}%"
+                    print(
+                        f"[Auto-Pacing] Predicted total {predicted_total:.2f}s outside safe 62.8-71.2s window. "
+                        f"Recalibrating Edge-TTS + ASS with rate='{auto_rate}'..."
+                    )
+                    sub_res = _tts_and_subs_task(auto_rate)
+                    speech_dur = sub_res["probed_duration"]
+                    voice_rate = auto_rate
+
         timings["parallel_tts_subs_and_outro"] = round(time.time() - t0, 2)
 
         # Phase 2: Build Strict Sequential Timeline & Single-Generation Direct GPU Filtergraph
@@ -488,6 +510,8 @@ def fast_ffmpeg_render(
             "output_video": dest_path,
             "measured_duration_seconds": final_dur,
             "speech_duration_seconds": round(speech_dur, 2),
+            "outro_duration_seconds": round(outro_dur, 2),
+            "voice_rate": voice_rate,
             "resolution": "1080x1920",
             "fps": 30,
             "voice_name": final_voice,
@@ -525,6 +549,7 @@ def main():
     parser.add_argument("--subtitle-style", choices=["hybrid", "hormozi", "typewriter", "mpt_legacy"], default=None, help="Dynamic subtitle style")
     parser.add_argument("--subtitle-color", default=None, help="Accent color (e.g. yellow, cyan, green)")
     parser.add_argument("--subtitle-box", action="store_true", help="Enable semi-transparent dark box background (default is clean outline)")
+    parser.add_argument("--voice-rate", default="+0%", help="Edge-TTS speech rate adjustment (e.g. +10%, -8%)")
     parser.add_argument("--legacy-engine", action="store_true", help="Fallback to legacy MoneyPrinterTurbo MoviePy render engine")
     args = parser.parse_args()
 
@@ -653,6 +678,7 @@ def main():
                 channel_name=channel_name,
                 niche=niche,
                 no_outro=args.no_outro,
+                voice_rate=args.voice_rate,
             )
 
         # Fallback path: Legacy MoneyPrinterTurbo CLI (with sequential order enforced)
