@@ -272,7 +272,7 @@ def main():
 
         language = script_data.get("language", channel_lang or "es")
         final_voice = script_data.get("voice_name", channel_voice or voice_name)
-        subtitle_style = args.subtitle_style or script_data.get("subtitle_style") or channel_sub_style or "hybrid"
+        subtitle_style = args.subtitle_style or script_data.get("subtitle_style") or channel_sub_style or "hormozi"
         subtitle_color = args.subtitle_color or script_data.get("subtitle_color") or channel_sub_color or "yellow"
 
         dynamic_ass_path = None
@@ -295,6 +295,7 @@ def main():
                 output_ass=dynamic_ass_path,
                 style=subtitle_style,
                 accent_color=subtitle_color,
+                words_per_line=3,
             )
 
             argv.extend([
